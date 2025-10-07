@@ -324,8 +324,8 @@
             "dependencies": [
               "9.3"
             ],
-            "details": "Integrate decryption logic with the transaction signing workflow. Ensure decrypted keys are securely erased from memory after use.",
-            "status": "pending",
+            "details": "Integrate decryption logic with the transaction signing workflow. Ensure decrypted keys are securely erased from memory after use.\n<info added on 2025-10-07T21:12:24.581Z>\nCompleted controlled decryption for transaction signing:\n\nCreated TransactionSigningService with three secure signing methods: signTransaction() for Solana transactions (legacy and versioned), signMessage() for Ed25519 message signing, and withKeypair() for temporary keypair operations. All methods follow a secure lifecycle: retrieve encrypted private key from the database, decrypt using KeyManagementService, create Keypair in memory, perform signing, immediately overwrite sensitive data with zeros, clear references, and suggest garbage collection.\n\nSecurity features include: private keys only in memory during signing, sensitive data overwritten in finally blocks, guaranteed memory cleanup even on errors, wallet owner authorization checks, no private keys in logs or errors, and garbage collection suggested after cleanup.\n\nMemory cleanup process: privateKeyString overwritten with null characters, Keypair secretKey filled with zeros, all references set to null, and global.gc() called if available.\n\nTransactionSigningService registered in AppModule providers.\n\nComprehensive test suite (12 tests, all passing) covers transaction signing, message signing, withKeypair callback, error handling for read-only and non-existent wallets, memory cleanup verification, callback error handling with cleanup, security checks for private key exposure, and user authorization enforcement.\n\nFiles created: backend/api/src/services/transaction-signing.service.ts and backend/api/src/services/transaction-signing.service.spec.ts. AppModule updated to register TransactionSigningService.\n\nArchitecture ensures decryption is restricted to transaction signing, keys are never persisted after decryption, immediate cleanup after use, multiple security layers, and compatibility with worker-based signing.\n\nReady for subtask 9.5: Document and Implement Key Rotation Procedures.\n</info added on 2025-10-07T21:12:24.581Z>",
+            "status": "done",
             "testStrategy": "Integration tests to confirm decryption occurs only during signing and keys are not retained post-operation."
           },
           {
@@ -640,7 +640,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T21:06:53.617Z",
+      "updated": "2025-10-07T21:12:33.904Z",
       "description": "Tasks for master context"
     }
   }

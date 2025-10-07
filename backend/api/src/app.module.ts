@@ -9,11 +9,12 @@ import { SettingsController } from './v1/settings/settings.controller'
 import { SupabaseService } from './services/supabase.service'
 import { EncryptionService } from './services/encryption.service'
 import { KeyManagementService } from './services/key-management.service'
+import { TransactionSigningService } from './services/transaction-signing.service'
 import { WebSocketModule } from './websocket/websocket.module'
 
 @Module({
     imports: [WebSocketModule],
     controllers: [HealthController, MeController, TokensController, WalletsController, CampaignsController, DashboardController, SettingsController],
-    providers: [SupabaseService, EncryptionService, KeyManagementService],
+    providers: [SupabaseService, EncryptionService, KeyManagementService, TransactionSigningService],
 })
 export class AppModule {}
