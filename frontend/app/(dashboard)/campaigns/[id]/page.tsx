@@ -173,22 +173,22 @@ export default function CampaignDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1 min-w-0">
           <button
             onClick={() => router.push('/campaigns')}
-            className="text-sm text-indigo-600 hover:text-indigo-900 mb-2"
+            className="text-sm text-indigo-600 hover:text-indigo-900 mb-2 inline-block"
           >
             ← Back to campaigns
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">{campaign.name}</h1>
-          <div className="mt-2 flex items-center gap-3 flex-wrap">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{campaign.name}</h1>
+          <div className="mt-2 flex items-center gap-2 sm:gap-3 flex-wrap">
             <span className={`inline-flex items-center px-2 py-1 text-xs font-medium ${getStatusBadgeClass(campaign.status)}`}>
               {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
             </span>
-            <span className="text-sm text-gray-500">
+            <span className="text-xs sm:text-sm text-gray-500">
               Created {new Date(campaign.created_at).toLocaleDateString()}
             </span>
             {/* WebSocket Connection Status */}
@@ -206,11 +206,11 @@ export default function CampaignDetailPage() {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:shrink-0">
           {campaign.status === 'draft' && (
             <button
               onClick={handleStart}
-              className="px-4 py-2 text-sm font-semibold bg-green-600 text-white shadow-sm hover:bg-green-500"
+              className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-green-600 text-white shadow-sm hover:bg-green-500"
             >
               Start Campaign
             </button>
@@ -219,13 +219,13 @@ export default function CampaignDetailPage() {
             <>
               <button
                 onClick={handlePause}
-                className="px-4 py-2 text-sm font-semibold bg-yellow-600 text-white shadow-sm hover:bg-yellow-500"
+                className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-yellow-600 text-white shadow-sm hover:bg-yellow-500"
               >
                 Pause
               </button>
               <button
                 onClick={handleStop}
-                className="px-4 py-2 text-sm font-semibold bg-red-600 text-white shadow-sm hover:bg-red-500"
+                className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-red-600 text-white shadow-sm hover:bg-red-500"
               >
                 Stop
               </button>
@@ -235,13 +235,13 @@ export default function CampaignDetailPage() {
             <>
               <button
                 onClick={handleStart}
-                className="px-4 py-2 text-sm font-semibold bg-green-600 text-white shadow-sm hover:bg-green-500"
+                className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-green-600 text-white shadow-sm hover:bg-green-500"
               >
                 Resume
               </button>
               <button
                 onClick={handleStop}
-                className="px-4 py-2 text-sm font-semibold bg-red-600 text-white shadow-sm hover:bg-red-500"
+                className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-red-600 text-white shadow-sm hover:bg-red-500"
               >
                 Stop
               </button>
@@ -288,10 +288,10 @@ export default function CampaignDetailPage() {
       {/* Parameters */}
       <div className="bg-white shadow border border-gray-200">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+          <h3 className="text-base sm:text-lg font-medium leading-6 text-gray-900 mb-4">
             Campaign Parameters
           </h3>
-          <dl className="grid grid-cols-2 gap-4 text-sm">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
             <div>
               <dt className="text-gray-500">Slippage</dt>
               <dd className="mt-1 font-medium">{campaign.params.slippage || 1}%</dd>
@@ -306,7 +306,7 @@ export default function CampaignDetailPage() {
             </div>
             <div>
               <dt className="text-gray-500">Jito Execution</dt>
-              <dd className="mt-1 font-medium">
+              <dd className="mt-1 font-medium break-words">
                 {campaign.params.useJito ? `Yes (${campaign.params.jitoTip || 0.0001} SOL tip)` : 'No'}
               </dd>
             </div>
@@ -317,64 +317,66 @@ export default function CampaignDetailPage() {
       {/* Execution Logs */}
       <div className="bg-white shadow border border-gray-200">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+          <h3 className="text-base sm:text-lg font-medium leading-6 text-gray-900 mb-4">
             Recent Executions
           </h3>
           {logs.length === 0 ? (
             <p className="text-sm text-gray-500">No executions yet</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Signature
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Latency
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Time
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {logs.map((log) => (
-                    <tr key={log.id}>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm">
-                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium ${
-                          log.result?.type === 'buy' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {log.result?.type || 'unknown'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
-                        {log.tx_signature ? (
-                          <a
-                            href={`https://solscan.io/tx/${log.tx_signature}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            {log.tx_signature.slice(0, 8)}...
-                          </a>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {log.latency_ms ? `${log.latency_ms}ms` : '-'}
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(log.created_at).toLocaleTimeString()}
-                      </td>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Signature
+                      </th>
+                      <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Latency
+                      </th>
+                      <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Time
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {logs.map((log) => (
+                      <tr key={log.id}>
+                        <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium ${
+                            log.result?.type === 'buy' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {log.result?.type || 'unknown'}
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-mono text-gray-500">
+                          {log.tx_signature ? (
+                            <a
+                              href={`https://solscan.io/tx/${log.tx_signature}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              {log.tx_signature.slice(0, 6)}...
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                          {log.latency_ms ? `${log.latency_ms}ms` : '-'}
+                        </td>
+                        <td className="px-2 sm:px-3 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                          {new Date(log.created_at).toLocaleTimeString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -384,22 +386,27 @@ export default function CampaignDetailPage() {
       {runs.length > 0 && (
         <div className="bg-white shadow border border-gray-200">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+            <h3 className="text-base sm:text-lg font-medium leading-6 text-gray-900 mb-4">
               Campaign Runs
             </h3>
             <div className="space-y-3">
               {runs.map((run) => (
-                <div key={run.id} className="flex items-center justify-between p-3 border border-gray-200">
-                  <div>
-                    <div className="text-sm font-medium">
+                <div key={run.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border border-gray-200">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate">
                       Run #{run.id.slice(0, 8)}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 break-words">
                       Started: {new Date(run.started_at).toLocaleString()}
-                      {run.ended_at && ` • Ended: ${new Date(run.ended_at).toLocaleString()}`}
+                      {run.ended_at && (
+                        <span className="block sm:inline">
+                          <span className="hidden sm:inline"> • </span>
+                          Ended: {new Date(run.ended_at).toLocaleString()}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <span className={`inline-flex items-center px-2 py-1 text-xs font-medium ${
+                  <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-medium self-start sm:self-auto ${
                     run.status === 'running' ? 'bg-green-100 text-green-800' :
                     run.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
                     run.status === 'stopped' ? 'bg-red-100 text-red-800' :

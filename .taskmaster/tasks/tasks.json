@@ -162,7 +162,7 @@
               "6.2"
             ],
             "details": "Utilize Axios or fetch with TypeScript types, React Query for data fetching, and implement WebSocket hooks for real-time updates. Handle authentication, error states, and optimistic UI updates.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Integration tests for API and WebSocket interactions, including error handling and state updates."
           },
           {
@@ -173,7 +173,7 @@
               "6.2"
             ],
             "details": "Use Chakra UI or MUI responsive utilities, CSS-in-JS, and media queries to adapt layouts and components. Test across device sizes and orientations.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Manual UI verification on multiple devices and automated visual regression tests."
           },
           {
@@ -529,7 +529,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T19:28:10.673Z",
+      "updated": "2025-10-07T19:35:18.926Z",
       "description": "Tasks for master context"
     }
   }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { tokenApi, type Token, type Pool } from '@/lib/api/tokens'
 import { walletApi, type Wallet } from '@/lib/api/wallets'
 import { campaignApi } from '@/lib/api/campaigns'
+import { toast } from 'sonner'
 
 type Step = 'token' | 'wallets' | 'parameters' | 'review'
 
@@ -50,7 +51,7 @@ export default function NewCampaignPage() {
       setTokens(tokensData)
       setWallets(walletsData.filter(w => w.is_active))
     } catch (err: any) {
-      alert(err.message || 'Failed to load data')
+      toast.error(err.message || 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -71,10 +72,11 @@ export default function NewCampaignPage() {
 
   const handleSubmit = async () => {
     if (!campaignName || !selectedToken || !selectedPool) {
-      alert('Please complete all required fields')
+      toast.error('Please complete all required fields')
       return
     }
 
+    const toastId = toast.loading('Creating campaign...')
     setSubmitting(true)
     try {
       const campaign = await campaignApi.create({
@@ -91,9 +93,10 @@ export default function NewCampaignPage() {
         },
       })
 
+      toast.success('Campaign created successfully', { id: toastId })
       router.push(`/campaigns/${campaign.id}`)
     } catch (err: any) {
-      alert(err.message || 'Failed to create campaign')
+      toast.error(err.message || 'Failed to create campaign', { id: toastId })
     } finally {
       setSubmitting(false)
     }
@@ -116,20 +119,20 @@ export default function NewCampaignPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Create Campaign</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Create Campaign</h1>
         <p className="mt-1 text-sm text-gray-500">
           Set up a new volume generation campaign
         </p>
       </div>
 
       {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8 overflow-x-auto pb-2">
         {(['token', 'wallets', 'parameters', 'review'] as Step[]).map((s, i) => (
-          <div key={s} className="flex items-center flex-1">
+          <div key={s} className="flex items-center flex-1 min-w-0">
             <div
-              className={`flex items-center justify-center w-8 h-8 ${
+              className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 text-xs sm:text-sm flex-shrink-0 ${
                 step === s
                   ? 'bg-indigo-600 text-white'
                   : i < ['token', 'wallets', 'parameters', 'review'].indexOf(step)
@@ -139,15 +142,15 @@ export default function NewCampaignPage() {
             >
               {i + 1}
             </div>
-            <span className={`ml-2 text-sm ${step === s ? 'font-medium' : ''}`}>
+            <span className={`ml-1 sm:ml-2 text-xs sm:text-sm ${step === s ? 'font-medium' : ''} hidden sm:inline`}>
               {s.charAt(0).toUpperCase() + s.slice(1)}
             </span>
-            {i < 3 && <div className="flex-1 h-0.5 bg-gray-200 mx-4" />}
+            {i < 3 && <div className="flex-1 h-0.5 bg-gray-200 mx-2 sm:mx-4" />}
           </div>
         ))}
       </div>
 
-      <div className="bg-white shadow border border-gray-200 p-6">
+      <div className="bg-white shadow border border-gray-200 p-4 sm:p-6">
         {/* Step 1: Select Token */}
         {step === 'token' && (
           <div className="space-y-4">
@@ -267,27 +270,27 @@ export default function NewCampaignPage() {
         {/* Step 3: Parameters */}
         {step === 'parameters' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-medium">Campaign Parameters</h2>
-            
+            <h2 className="text-base sm:text-lg font-medium">Campaign Parameters</h2>
+
             <div>
               <label className="block text-sm font-medium text-gray-700">Campaign Name</label>
               <input
                 type="text"
                 value={campaignName}
                 onChange={(e) => setCampaignName(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                className="mt-1 block w-full border border-gray-300 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                 placeholder="My Campaign"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Slippage (%)</label>
                 <input
                   type="number"
                   value={slippage}
                   onChange={(e) => setSlippage(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                   step="0.1"
                   min="0.1"
                   max="50"
@@ -300,7 +303,7 @@ export default function NewCampaignPage() {
                   type="number"
                   value={minTxSize}
                   onChange={(e) => setMinTxSize(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                   step="0.01"
                   min="0.001"
                 />
@@ -312,7 +315,7 @@ export default function NewCampaignPage() {
                   type="number"
                   value={maxTxSize}
                   onChange={(e) => setMaxTxSize(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                  className="mt-1 block w-full border border-gray-300 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                   step="0.01"
                   min="0.001"
                 />
@@ -367,32 +370,32 @@ export default function NewCampaignPage() {
         {/* Step 4: Review */}
         {step === 'review' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-medium">Review Campaign</h2>
-            
+            <h2 className="text-base sm:text-lg font-medium">Review Campaign</h2>
+
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600">Campaign Name:</span>
-                <span className="font-medium">{campaignName}</span>
+                <span className="font-medium break-words">{campaignName}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600">Token:</span>
                 <span className="font-medium">
                   {tokens.find(t => t.id === selectedToken)?.symbol || 'Unknown'}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600">Wallets:</span>
                 <span className="font-medium">{selectedWallets.length} selected</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600">Slippage:</span>
                 <span className="font-medium">{slippage}%</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600">Transaction Size:</span>
                 <span className="font-medium">{minTxSize} - {maxTxSize} SOL</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600">Jito:</span>
                 <span className="font-medium">{useJito ? `Yes (${jitoTip} SOL tip)` : 'No'}</span>
               </div>
