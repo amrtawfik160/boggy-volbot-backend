@@ -1,0 +1,424 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Backend Worker Job Handlers",
+        "description": "Implement all required queue worker classes for campaign execution.",
+        "details": "Create worker classes for 'gather', 'trade.buy', 'trade.sell', 'distribute', 'status', 'webhook', and 'funds.gather' queues in backend/workers/src/workers/. Use BullMQ v4 for queue management, integrate legacy and Jito executor logic, implement exponential backoff for retries, idempotency checks (signature deduplication), job progress tracking, error handling, and dead-letter queue processing.",
+        "testStrategy": "Unit test each worker with mocked queue jobs, verify job execution, retry logic, idempotency, and error handling.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Implement Campaign Execution Engine",
+        "description": "Complete backend logic for campaign lifecycle management.",
+        "details": "Extend API endpoints to trigger campaign_run creation, wallet generation/distribution, job enqueuing, pause/resume/stop logic, and sell-only mode. Integrate with worker queues. Use TypeORM or Prisma for DB updates. Ensure RPC failover and state persistence.",
+        "testStrategy": "Integration tests for campaign lifecycle (create, start, pause, resume, stop), verify DB updates and job enqueuing.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Integrate Legacy and Jito Executors",
+        "description": "Wire up legacy and Jito transaction executors to worker job handlers.",
+        "details": "Refactor jito.ts and legacy.ts to expose unified interfaces. Inject executor selection based on campaign config. Ensure Jito tip and auth keypair are configurable. Use @solana/web3.js v1.88+ for transaction signing.",
+        "testStrategy": "Unit and integration tests for buy/sell jobs, verify correct executor usage and transaction parameters.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Implement Real-Time WebSocket Gateway",
+        "description": "Add WebSocket support for live campaign updates in NestJS API.",
+        "details": "Use @nestjs/websockets and socket.io v4. Create campaign_id channels, emit job and run status events. Authenticate connections with Supabase JWT. Implement reconnection and state recovery logic.",
+        "testStrategy": "E2E tests for WebSocket connections, event emission, authentication, and reconnection.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement Status Aggregation Worker",
+        "description": "Create periodic status worker for campaign metrics aggregation.",
+        "details": "Worker runs every 10-30s per active campaign, aggregates job metrics, updates campaign_runs.summary in DB, broadcasts updates via WebSocket. Use BullMQ repeatable jobs and Redis for scheduling.",
+        "testStrategy": "Unit tests for aggregation logic, integration tests for DB updates and WebSocket broadcast.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Develop Frontend Dashboard Components",
+        "description": "Build all functional React dashboard components for campaign management.",
+        "details": "Use React 18+, TypeScript 5+, and Chakra UI or MUI v5. Implement overview cards, campaign list/detail, creation wizard, wallet list, token registration, pool selection, settings forms, logs table, real-time indicators. Integrate API calls and WebSocket subscriptions. Ensure mobile-first responsive design.",
+        "testStrategy": "Component tests with Vitest + Testing Library, manual UI verification.",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Implement Frontend API Integration Layer",
+        "description": "Create typed API client and integrate all endpoints in frontend.",
+        "details": "Use Axios v1.6+ or fetch, TypeScript types, React Query v5 for data fetching, request/response interceptors for auth, error handling, toast notifications, optimistic updates.",
+        "testStrategy": "Integration tests for API calls, error handling, and state management.",
+        "priority": "high",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Integrate Frontend WebSocket Subscriptions",
+        "description": "Connect frontend to backend WebSocket channels for real-time updates.",
+        "details": "Use socket.io-client v4, subscribe to campaign-specific channels, handle reconnection, update UI state on events.",
+        "testStrategy": "Component and integration tests for real-time updates and UI state changes.",
+        "priority": "high",
+        "dependencies": [
+          4,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement Wallet Encryption Service",
+        "description": "Verify and complete AES-256-GCM encryption for wallet private keys.",
+        "details": "Use node:crypto or libsodium for AES-256-GCM. Implement per-user DEK encrypted by KEK, master key from env. Document key rotation. Decrypt only for transaction signing.",
+        "testStrategy": "Unit tests for encryption/decryption, integration tests for transaction signing.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Strengthen Input Validation",
+        "description": "Add robust validation for all API endpoints and frontend forms.",
+        "details": "Use class-validator v0.14+ for DTOs, validate Solana addresses (base58, length), campaign params (slippage, tx size), sanitize inputs, zod v3+ for frontend forms.",
+        "testStrategy": "Unit tests for validation logic, integration tests for error responses.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Implement Rate Limiting",
+        "description": "Add per-user and per-IP rate limits to sensitive API endpoints.",
+        "details": "Use @nestjs/throttler v2+, Redis backend. Configure limits: 100 req/min/user, 5/min for campaign start, stricter for wallet creation.",
+        "testStrategy": "Integration tests for rate limit enforcement and error responses.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Develop Admin API Endpoints",
+        "description": "Implement all required admin endpoints for system monitoring and control.",
+        "details": "Add endpoints for metrics, campaigns, users, queue stats, manual override, system pause. Use RBAC for admin-only access.",
+        "testStrategy": "Unit and integration tests for endpoint logic and access control.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Build Admin Dashboard UI",
+        "description": "Create frontend admin dashboard for system health and controls.",
+        "details": "Admin-only route group, system health dashboard, campaign/user overview, abuse alerts, manual override controls, audit log viewer. Use React, Chakra UI/MUI, and API integration.",
+        "testStrategy": "Component and integration tests for admin UI and controls.",
+        "priority": "medium",
+        "dependencies": [
+          12,
+          6,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Integrate Structured Logging",
+        "description": "Implement Pino logger across API and workers for structured JSON logs.",
+        "details": "Use pino v8+, log levels (debug, info, warn, error), context fields (userId, campaignId, jobId), aggregate logs to Datadog or CloudWatch. Track request IDs.",
+        "testStrategy": "Unit tests for log output, integration tests for log aggregation.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Implement Metrics & Tracing",
+        "description": "Add Prometheus/CloudWatch metrics and Sentry error tracking.",
+        "details": "Expose metrics endpoints, track queue depths, job rates, RPC stats, API latency. Integrate Sentry v7+ for error tracking. Optionally add OpenTelemetry for distributed tracing.",
+        "testStrategy": "Integration tests for metrics endpoints, verify Sentry error capture.",
+        "priority": "medium",
+        "dependencies": [
+          14
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Enhance Health Checks",
+        "description": "Implement deep health checks for DB, Redis, RPC providers.",
+        "details": "Extend /health endpoint, add liveness/readiness probes for k8s, handle degraded states (e.g., RPC down but queue continues). Use @nestjs/terminus v8+.",
+        "testStrategy": "Integration tests for health endpoints, simulate failures.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Implement Email Notification System",
+        "description": "Add email notifications for campaign events and system alerts.",
+        "details": "Use Supabase Auth email or SendGrid/Resend API. Trigger emails for campaign started/completed/failed, low wallet balance, maintenance. Store notification templates.",
+        "testStrategy": "Unit tests for email logic, integration tests for delivery.",
+        "priority": "low",
+        "dependencies": [
+          2,
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Implement Webhook Delivery System",
+        "description": "Create webhook queue worker and delivery logic.",
+        "details": "Process webhook events, implement retry with exponential backoff, HMAC signature for security, test endpoint for users, delivery logs. Use BullMQ and node:crypto.",
+        "testStrategy": "Unit and integration tests for webhook delivery, retries, and security.",
+        "priority": "low",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Expand Backend Test Coverage",
+        "description": "Add unit, integration, and E2E tests for backend services and workers.",
+        "details": "Use Jest v29+ or Vitest, target 80%+ coverage. Mock queues, test API endpoints, campaign lifecycle, load testing with Artillery or k6.",
+        "testStrategy": "Automated test coverage reports, manual review for critical paths.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Expand Frontend Test Coverage",
+        "description": "Add component, integration, and E2E tests for frontend.",
+        "details": "Use Vitest + Testing Library for components, Playwright for E2E (login, create campaign, monitor), optional visual regression tests.",
+        "testStrategy": "Automated test runs, coverage reports, manual UI review.",
+        "priority": "medium",
+        "dependencies": [
+          6,
+          7,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Verify Campaign Business Logic",
+        "description": "Test and validate all campaign lifecycle and parameter logic.",
+        "details": "Validate campaign params (tx size, slippage), status transitions, run creation, concurrent campaigns, wallet requirements, Jito/legacy mode switching.",
+        "testStrategy": "Integration and E2E tests, manual verification of edge cases.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          19
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 22,
+        "title": "Verify Job & Queue Logic",
+        "description": "Test job enqueuing, priority, retries, idempotency, concurrency, and shutdown.",
+        "details": "Ensure jobs are enqueued with correct priority/delay, retries use exponential backoff, failed jobs move to DLQ, idempotency prevents duplicates, concurrency limits honored, graceful shutdown.",
+        "testStrategy": "Unit and integration tests, simulate failures and shutdowns.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          19
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "Verify Wallet & Token Logic",
+        "description": "Test wallet encryption, balance queries, token metadata, pool discovery, and caching.",
+        "details": "Verify private key encryption, SOL/SPL balance queries, fetch token metadata from Solana indexers, pool discovery via Raydium/Orca APIs, cache pool info in Redis with TTL.",
+        "testStrategy": "Integration tests for wallet/token endpoints, cache validation.",
+        "priority": "high",
+        "dependencies": [
+          9,
+          19
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "Verify Trading Execution Logic",
+        "description": "Test buy/sell transactions, executor switching, logging, RPC failover, confirmation polling, partial fills.",
+        "details": "Ensure buy/sell jobs use correct slippage, Jito tip/auth, legacy fallback, log signatures, handle RPC failover, poll for confirmations, handle partial fills.",
+        "testStrategy": "Integration and E2E tests, simulate RPC failures and partial fills.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          19
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Validate Environment Configuration",
+        "description": "Document and validate all required environment variables and secrets.",
+        "details": "List all required env vars, validate on startup (throw error if missing), support dev/staging/prod, document secrets management (AWS Secrets Manager/Doppler).",
+        "testStrategy": "Unit tests for config validation, manual review of documentation.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 26,
+        "title": "Implement Database Migration System",
+        "description": "Add migration tooling and version control for DB schema.",
+        "details": "Use Prisma v5+ or node-pg-migrate, version control schema changes, implement rollback procedures, seed data for dev/testing.",
+        "testStrategy": "Integration tests for migrations, rollback, and seed data.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 27,
+        "title": "Productionize Docker & Orchestration",
+        "description": "Create production Dockerfiles, Compose, and optional k8s manifests.",
+        "details": "Write optimized Dockerfiles for API/workers, Compose for full stack (API, workers, Redis, Postgres), k8s manifests for production, configure horizontal scaling for workers.",
+        "testStrategy": "Manual deployment tests, verify scaling and health checks.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 28,
+        "title": "Setup CI/CD Pipeline",
+        "description": "Implement GitHub Actions workflows for lint, test, build, deploy, and migrations.",
+        "details": "Configure workflows for lint/type-check on PR, run tests, build/deploy on merge, automate DB migrations, rollback procedures.",
+        "testStrategy": "Manual and automated verification of CI/CD runs and deployments.",
+        "priority": "medium",
+        "dependencies": [
+          26,
+          27
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 29,
+        "title": "Optimize API and Queue Performance",
+        "description": "Tune DB queries, add caching, pagination, connection pooling, and queue concurrency.",
+        "details": "Add missing DB indexes, Redis caching for pool/token info, paginate large responses, use pg-pool and ioredis for connection pooling, tune BullMQ concurrency, implement job priority system.",
+        "testStrategy": "Load and performance tests, monitor metrics for improvements.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          1,
+          15
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 30,
+        "title": "Complete Documentation",
+        "description": "Write and publish API, deployment, and developer documentation.",
+        "details": "Integrate @nestjs/swagger for OpenAPI docs, write deployment guides, environment setup, DB migration, secrets management, monitoring, runbook, architecture/data flow diagrams, testing/contribution/code style guides.",
+        "testStrategy": "Manual review and verification of documentation completeness and accuracy.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          26,
+          28
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-10-07T18:03:58.265Z",
+      "updated": "2025-10-07T18:03:58.265Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
