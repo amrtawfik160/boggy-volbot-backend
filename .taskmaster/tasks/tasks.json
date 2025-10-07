@@ -9,7 +9,7 @@
         "testStrategy": "Unit test each worker with mocked queue jobs, verify job execution, retry logic, idempotency, and error handling.",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -22,7 +22,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -49,8 +49,64 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up NestJS WebSocket Gateway with Socket.IO",
+            "description": "Initialize the NestJS WebSocket gateway using @nestjs/websockets and socket.io v4, ensuring the server is configured for real-time communication.",
+            "dependencies": [],
+            "details": "Install required packages, configure the gateway, and verify basic connection and disconnection handling.\n<info added on 2025-10-07T18:34:17.986Z>\nCompleted WebSocket gateway setup:\n- Installed @nestjs/websockets@^10.4.20, @nestjs/platform-socket.io@^10.4.20, and socket.io@^4.8.1\n- Created CampaignWebSocketGateway with lifecycle handlers for connection and disconnection\n- Implemented basic ping/pong message handling to verify active connections\n- Created WebSocketModule and integrated it into AppModule\n- Added comprehensive unit tests covering gateway initialization, connection, disconnection, and message handling logic\n- All unit tests passing (5/5)\n- Build type-checks successfully; only pre-existing token-metadata error remains\n</info added on 2025-10-07T18:34:17.986Z>",
+            "status": "done",
+            "testStrategy": "Unit tests for gateway instantiation and connection lifecycle events."
+          },
+          {
+            "id": 2,
+            "title": "Implement Campaign Channel Management",
+            "description": "Create dynamic channels based on campaign_id to isolate live updates per campaign.",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Use socket.io rooms to join/leave campaign_id channels and emit events only to relevant clients.",
+            "status": "pending",
+            "testStrategy": "E2E tests for joining/leaving channels and event isolation per campaign."
+          },
+          {
+            "id": 3,
+            "title": "Emit Job and Run Status Events",
+            "description": "Design and implement event emission for job and run status updates to clients subscribed to campaign channels.",
+            "dependencies": [
+              "4.2"
+            ],
+            "details": "Define event payloads, trigger emissions on relevant backend changes, and ensure correct delivery to channel members.",
+            "status": "pending",
+            "testStrategy": "E2E tests for event emission, payload correctness, and client reception."
+          },
+          {
+            "id": 4,
+            "title": "Authenticate WebSocket Connections with Supabase JWT",
+            "description": "Integrate Supabase JWT authentication to validate and authorize WebSocket connections before joining campaign channels.",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Implement middleware or guards to verify JWT on connection, reject unauthorized clients, and propagate user context.",
+            "status": "pending",
+            "testStrategy": "E2E tests for authentication enforcement, valid/invalid token handling, and user context propagation."
+          },
+          {
+            "id": 5,
+            "title": "Implement Reconnection and State Recovery Logic",
+            "description": "Ensure clients can reconnect and recover their previous state, including channel subscriptions and missed events.",
+            "dependencies": [
+              "4.2",
+              "4.3",
+              "4.4"
+            ],
+            "details": "Handle reconnection events, restore channel memberships, and provide mechanisms for clients to fetch missed updates.",
+            "status": "pending",
+            "testStrategy": "E2E tests for reconnection scenarios, state restoration, and event replay."
+          }
+        ]
       },
       {
         "id": 5,
@@ -417,7 +473,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T18:03:58.265Z",
+      "updated": "2025-10-07T18:34:18.027Z",
       "description": "Tasks for master context"
     }
   }
