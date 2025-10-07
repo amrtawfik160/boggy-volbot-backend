@@ -8,11 +8,12 @@ import { DashboardController } from './v1/dashboard/dashboard.controller'
 import { SettingsController } from './v1/settings/settings.controller'
 import { SupabaseService } from './services/supabase.service'
 import { EncryptionService } from './services/encryption.service'
+import { KeyManagementService } from './services/key-management.service'
 import { WebSocketModule } from './websocket/websocket.module'
 
 @Module({
     imports: [WebSocketModule],
     controllers: [HealthController, MeController, TokensController, WalletsController, CampaignsController, DashboardController, SettingsController],
-    providers: [SupabaseService, EncryptionService],
+    providers: [SupabaseService, EncryptionService, KeyManagementService],
 })
 export class AppModule {}

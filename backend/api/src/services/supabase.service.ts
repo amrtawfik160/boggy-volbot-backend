@@ -118,6 +118,65 @@ export class SupabaseService {
         if (error) throw error
     }
 
+    async getWalletsByUserIdWithPrivateKeys(userId: string) {
+        const { data, error } = await this.supabase
+            .from('wallets')
+            .select('id, user_id, address, encrypted_private_key, label, is_active, created_at, updated_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        return data
+    }
+
+    async updateWalletPrivateKey(walletId: string, encryptedPrivateKey: Buffer) {
+        const { error } = await this.supabase
+            .from('wallets')
+            .update({ encrypted_private_key: encryptedPrivateKey })
+            .eq('id', walletId)
+
+        if (error) throw error
+    }
+
+    // User Encryption Keys
+    async getUserEncryptionKey(userId: string) {
+        const { data, error } = await this.supabase
+            .from('user_encryption_keys')
+            .select('*')
+            .eq('user_id', userId)
+            .order('key_version', { ascending: false })
+            .limit(1)
+            .single()
+
+        if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows
+        return data
+    }
+
+    async createUserEncryptionKey(keyData: { user_id: string; encrypted_dek: Buffer; key_version: number }) {
+        const { data, error } = await this.supabase.from('user_encryption_keys').insert(keyData).select().single()
+
+        if (error) throw error
+        return data
+    }
+
+    async updateUserEncryptionKey(userId: string, updates: { encrypted_dek: Buffer; key_version: number }) {
+        const { data, error } = await this.supabase
+            .from('user_encryption_keys')
+            .update(updates)
+            .eq('user_id', userId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    }
+
+    async deleteUserEncryptionKey(userId: string) {
+        const { error } = await this.supabase.from('user_encryption_keys').delete().eq('user_id', userId)
+
+        if (error) throw error
+    }
+
     // Campaigns
     async getCampaignsByUserId(userId: string) {
         const { data, error } = await this.supabase

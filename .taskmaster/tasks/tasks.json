@@ -313,8 +313,8 @@
             "dependencies": [
               "9.2"
             ],
-            "details": "Implement logic to retrieve and decrypt the DEK using the KEK and master key before decrypting the private key. Ensure DEKs and KEKs are never exposed in plaintext outside secure memory.",
-            "status": "pending",
+            "details": "Implement logic to retrieve and decrypt the DEK using the KEK and master key before decrypting the private key. Ensure DEKs and KEKs are never exposed in plaintext outside secure memory.\n<info added on 2025-10-07T21:06:40.288Z>\nCompleted integration of per-user DEK and KEK workflow:\n\n- KeyManagementService implemented to manage the full per-user DEK lifecycle, including creation, retrieval, rotation, and deletion, with high-level APIs for private key encryption and decryption. DEKs are generated as 32-byte values, encrypted with the KEK, and stored securely in the database. DEKs are never exposed in plaintext outside secure memory, and rotation re-encrypts all user wallets with a new DEK.\n\n- SupabaseService extended to support DEK operations, including retrieval, storage, update, and deletion of encrypted DEKs, as well as wallet retrieval and update routines for encrypted private keys.\n\n- Database migration added for the user_encryption_keys table, with schema enforcing secure storage, referential integrity, unique constraints, indexing, row-level security, and audit triggers.\n\n- WalletsController refactored to use KeyManagementService for all wallet encryption operations, ensuring DEKs are created and managed automatically per user, and maintaining backward compatibility for read-only wallets.\n\n- KeyManagementService registered in AppModule for dependency injection.\n\n- Comprehensive test suite created and passing, covering DEK lifecycle, encryption/decryption, rotation, error handling, integration, and multi-wallet scenarios.\n\n- Architecture enforces: Master Key (env) → KEK (HKDF-derived, memory-only) → per-user DEK (encrypted at rest) → wallet private keys (encrypted at rest). Private keys and DEKs are only decrypted in secure memory for transaction signing.\n\n- Implementation complete and ready for controlled decryption logic in the next subtask.\n</info added on 2025-10-07T21:06:40.288Z>",
+            "status": "done",
             "testStrategy": "Integration tests to verify correct key retrieval, wrapping, and unwrapping for multiple users."
           },
           {
@@ -640,7 +640,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T20:04:17.513Z",
+      "updated": "2025-10-07T21:06:53.617Z",
       "description": "Tasks for master context"
     }
   }

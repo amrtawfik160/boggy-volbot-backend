@@ -13,7 +13,7 @@ import {
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard';
 import { CurrentUser } from '../../decorators/user.decorator';
 import { SupabaseService } from '../../services/supabase.service';
-import { EncryptionService } from '../../services/encryption.service';
+import { KeyManagementService } from '../../services/key-management.service';
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 
@@ -33,7 +33,7 @@ interface UpdateWalletDto {
 export class WalletsController {
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly encryption: EncryptionService
+    private readonly keyManagement: KeyManagementService,
   ) {}
 
   @Get()
@@ -57,16 +57,19 @@ export class WalletsController {
         const privateKeyBytes = bs58.decode(dto.privateKey);
         const keypair = Keypair.fromSecretKey(privateKeyBytes);
         address = keypair.publicKey.toString();
-        
-        // Encrypt the private key
-        encryptedPrivateKey = this.encryption.encrypt(dto.privateKey);
+
+        // Encrypt the private key with user's DEK
+        encryptedPrivateKey = await this.keyManagement.encryptPrivateKeyForUser(
+          user.id,
+          dto.privateKey,
+        );
       } catch (error) {
         throw new Error('Invalid private key format');
       }
     } else if (dto.address) {
       // Read-only wallet (no private key)
       address = dto.address;
-      
+
       // Validate it's a valid Solana address
       try {
         // Basic validation - Solana addresses are base58 and 32-44 chars
