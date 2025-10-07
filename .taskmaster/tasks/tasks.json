@@ -201,7 +201,7 @@
         "dependencies": [
           6
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -219,8 +219,8 @@
             "dependencies": [
               "7.1"
             ],
-            "details": "Integrate logic to attach auth tokens to outgoing requests and handle error responses globally, including triggering toast notifications for user feedback.",
-            "status": "pending",
+            "details": "Integrate logic to attach auth tokens to outgoing requests and handle error responses globally, including triggering toast notifications for user feedback.\n<info added on 2025-10-07T19:55:08.002Z>\nCompleted as part of subtask 7.1. The API client now includes:\n- Authentication interceptor using getAuthHeaders() to retrieve the Supabase session token\n- Request interceptor support via addInterceptor() with onRequest hook\n- Response interceptor support via onResponse hook\n- Global error handling interceptor via setupDefaultInterceptors(), handling 401, 403, 404, and 500 errors\n- Toast notifications for all error types using the Sonner library\n</info added on 2025-10-07T19:55:08.002Z>",
+            "status": "done",
             "testStrategy": "Integration tests for auth flow, error propagation, and notification triggers."
           },
           {
@@ -230,8 +230,8 @@
             "dependencies": [
               "7.1"
             ],
-            "details": "Document and export types for each endpoint, leveraging OpenAPI/Swagger definitions if available for consistency.",
-            "status": "pending",
+            "details": "Document and export types for each endpoint, leveraging OpenAPI/Swagger definitions if available for consistency.\n<info added on 2025-10-07T19:55:12.523Z>\nCompleted as part of task 7.1. All TypeScript types are defined and exported in the following files:\n- frontend/lib/api/campaigns.ts: Campaign, CampaignRun, CampaignStatus, CreateCampaignDto, UpdateCampaignDto, ExecutionLog\n- frontend/lib/api/tokens.ts: Token, Pool, CreateTokenDto, UpdateTokenDto\n- frontend/lib/api/wallets.ts: Wallet, CreateWalletDto, UpdateWalletDto\n- frontend/lib/api/dashboard.ts: DashboardMetrics, ActivityItem\n- frontend/lib/api/client.ts: ApiError, RequestInterceptor\n\nAll types use proper TypeScript conventions, with Record<string, unknown> instead of any.\n</info added on 2025-10-07T19:55:12.523Z>",
+            "status": "done",
             "testStrategy": "Type-checking and static analysis to ensure type coverage and correctness."
           },
           {
@@ -242,8 +242,8 @@
               "7.1",
               "7.3"
             ],
-            "details": "Implement custom hooks for each endpoint, supporting optimistic updates, query invalidation, and automatic retries as needed.",
-            "status": "pending",
+            "details": "Implement custom hooks for each endpoint, supporting optimistic updates, query invalidation, and automatic retries as needed.\n<info added on 2025-10-07T19:55:19.365Z>\nCompleted as part of task 7.1. Created comprehensive React Query hooks in frontend/lib/api/hooks.ts for Dashboard, Campaigns, Tokens, and Wallets endpoints, including useDashboardMetrics, useDashboardActivity, useCampaigns, useCampaign, useCampaignStatus, useCampaignRuns, useCampaignLogs, useCreateCampaign, useUpdateCampaign, useStartCampaign, usePauseCampaign, useStopCampaign, useTokens, useToken, useTokenPools, useTokenMetadata, useCreateToken, useUpdateToken, useDeleteToken, useWallets, useWallet, useWalletBalance, useCreateWallet, useUpdateWallet, and useDeleteWallet. All hooks implement automatic cache invalidation, utilize a query keys factory pattern, and are fully typed with TypeScript.\n</info added on 2025-10-07T19:55:19.365Z>",
+            "status": "done",
             "testStrategy": "Integration tests for data fetching, cache updates, optimistic UI, and state synchronization."
           },
           {
@@ -254,8 +254,8 @@
               "7.2",
               "7.4"
             ],
-            "details": "Use a notification library to display user feedback. Ensure optimistic updates are rolled back on failure and confirmed on success.",
-            "status": "pending",
+            "details": "Use a notification library to display user feedback. Ensure optimistic updates are rolled back on failure and confirmed on success.\n<info added on 2025-10-07T19:55:23.408Z>\nCompleted as part of task 7.1. Toast notifications are now implemented globally:\n- A global error interceptor displays toast notifications for all error types, including 401, 403, 404, and 500 errors.\n- All mutation hooks trigger success toast notifications (e.g., \"Campaign created successfully\").\n- All mutation hooks trigger error toast notifications with relevant error messages.\n- Optimistic updates are handled using React Query's built-in mechanisms, with rollbacks on failure and confirmation on success.\n- Query invalidation ensures the UI reflects the latest data after successful mutations.\n</info added on 2025-10-07T19:55:23.408Z>",
+            "status": "done",
             "testStrategy": "Integration tests for notification display, optimistic update behavior, and rollback on errors."
           }
         ]
@@ -585,7 +585,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T19:51:17.665Z",
+      "updated": "2025-10-07T19:55:32.607Z",
       "description": "Tasks for master context"
     }
   }
