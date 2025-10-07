@@ -302,8 +302,8 @@
             "dependencies": [
               "9.1"
             ],
-            "details": "Ensure encryption outputs ciphertext, nonce (IV), and authentication tag. Implement error handling for integrity/authenticity failures. Follow best practices for IV generation and storage.",
-            "status": "pending",
+            "details": "Ensure encryption outputs ciphertext, nonce (IV), and authentication tag. Implement error handling for integrity/authenticity failures. Follow best practices for IV generation and storage.\n<info added on 2025-10-07T20:04:11.219Z>\nAES-256-GCM encryption and decryption functions are now implemented with a three-tier key hierarchy (Master Key → KEK → DEK). HKDF-SHA256 is used to derive the KEK from a validated, base64-encoded 32-byte master key, which is initialized at service startup and kept in memory only. Per-user DEKs are generated as 32-byte random values, encrypted and decrypted with the KEK using AES-256-GCM, and output as [IV(16) + Ciphertext + AuthTag(16)]. Private key encryption and decryption use the user's DEK, with strict DEK length validation. Error handling is enhanced to detect authentication failures via GCM tag validation, provide clear security-conscious error messages, and log all operations comprehensively. Legacy encrypt/decrypt methods are preserved with @deprecated tags for backward compatibility during migration. A comprehensive test suite (22 tests) covers KEK initialization, DEK management, private key encryption, authentication failure detection, edge cases, and the full encryption flow. Implementation is ready for integration of per-user DEK and KEK workflow in the next subtask. Modified files: backend/api/src/services/encryption.service.ts and backend/api/src/services/encryption.service.spec.ts.\n</info added on 2025-10-07T20:04:11.219Z>",
+            "status": "done",
             "testStrategy": "Unit tests for encryption and decryption, including integrity check failures and edge cases."
           },
           {
@@ -640,7 +640,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T19:57:58.329Z",
+      "updated": "2025-10-07T20:04:17.513Z",
       "description": "Tasks for master context"
     }
   }
