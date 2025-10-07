@@ -1,21 +1,152 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CampaignWebSocketGateway } from './websocket.gateway';
+import { SupabaseService } from '../services/supabase.service';
 import { Server, Socket } from 'socket.io';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as supabaseConfig from '../config/supabase';
 
 describe('CampaignWebSocketGateway', () => {
   let gateway: CampaignWebSocketGateway;
+  let supabaseService: SupabaseService;
+
+  const mockSupabaseService = {
+    getCampaignById: vi.fn(),
+  };
 
   beforeEach(async () => {
+    vi.clearAllMocks();
+
+    // Mock supabaseAdmin.auth.getUser
+    vi.spyOn(supabaseConfig.supabaseAdmin.auth, 'getUser').mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-123',
+          email: 'test@example.com',
+          aud: 'authenticated',
+          role: 'authenticated',
+          created_at: '2025-01-01T00:00:00Z',
+          app_metadata: {},
+          user_metadata: {},
+        },
+      },
+      error: null,
+    } as any);
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CampaignWebSocketGateway],
+      providers: [
+        CampaignWebSocketGateway,
+        {
+          provide: SupabaseService,
+          useValue: mockSupabaseService,
+        },
+      ],
     }).compile();
 
     gateway = module.get<CampaignWebSocketGateway>(CampaignWebSocketGateway);
+    supabaseService = module.get<SupabaseService>(SupabaseService);
   });
 
   it('should be defined', () => {
     expect(gateway).toBeDefined();
+  });
+
+  describe('handleConnection - Authentication', () => {
+    it('should disconnect client without token', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        handshake: { query: {}, auth: {} },
+        disconnect: vi.fn(),
+      } as any;
+      const warnSpy = vi.spyOn(gateway['logger'], 'warn');
+
+      await gateway.handleConnection(mockClient);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('No authentication token provided'),
+      );
+      expect(mockClient.disconnect).toHaveBeenCalled();
+    });
+
+    it('should disconnect client with invalid token', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        handshake: { query: { token: 'invalid-token' }, auth: {} },
+        disconnect: vi.fn(),
+      } as any;
+
+      vi.spyOn(supabaseConfig.supabaseAdmin.auth, 'getUser').mockResolvedValue({
+        data: { user: null },
+        error: { message: 'Invalid token' } as any,
+      } as any);
+
+      const warnSpy = vi.spyOn(gateway['logger'], 'warn');
+
+      await gateway.handleConnection(mockClient);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid or expired token'),
+      );
+      expect(mockClient.disconnect).toHaveBeenCalled();
+    });
+
+    it('should accept client with valid token from query params', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        handshake: { query: { token: 'valid-token' }, auth: {} },
+        disconnect: vi.fn(),
+      } as any;
+
+      const logSpy = vi.spyOn(gateway['logger'], 'log');
+
+      await gateway.handleConnection(mockClient);
+
+      expect(mockClient.user).toBeDefined();
+      expect(mockClient.user.id).toBe('user-123');
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('authenticated as user'),
+      );
+      expect(mockClient.disconnect).not.toHaveBeenCalled();
+    });
+
+    it('should accept client with valid token from auth object', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        handshake: { query: {}, auth: { token: 'valid-token' } },
+        disconnect: vi.fn(),
+      } as any;
+
+      const logSpy = vi.spyOn(gateway['logger'], 'log');
+
+      await gateway.handleConnection(mockClient);
+
+      expect(mockClient.user).toBeDefined();
+      expect(mockClient.user.id).toBe('user-123');
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('authenticated as user'),
+      );
+      expect(mockClient.disconnect).not.toHaveBeenCalled();
+    });
+
+    it('should disconnect client on authentication error', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        handshake: { query: { token: 'error-token' }, auth: {} },
+        disconnect: vi.fn(),
+      } as any;
+
+      vi.spyOn(supabaseConfig.supabaseAdmin.auth, 'getUser').mockRejectedValue(
+        new Error('Authentication service error'),
+      );
+
+      const errorSpy = vi.spyOn(gateway['logger'], 'error');
+
+      await gateway.handleConnection(mockClient);
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Authentication error'),
+      );
+      expect(mockClient.disconnect).toHaveBeenCalled();
+    });
   });
 
   describe('afterInit', () => {
@@ -29,16 +160,6 @@ describe('CampaignWebSocketGateway', () => {
     });
   });
 
-  describe('handleConnection', () => {
-    it('should log client connection', () => {
-      const mockClient = { id: 'test-client-123' } as Socket;
-      const logSpy = vi.spyOn(gateway['logger'], 'log');
-
-      gateway.handleConnection(mockClient);
-
-      expect(logSpy).toHaveBeenCalledWith('Client connected: test-client-123');
-    });
-  });
 
   describe('handleDisconnect', () => {
     it('should log client disconnection', () => {
@@ -65,11 +186,71 @@ describe('CampaignWebSocketGateway', () => {
   });
 
   describe('handleJoinCampaign', () => {
-    it('should join campaign room with valid campaign ID', async () => {
+    it('should reject unauthenticated client', async () => {
       const mockClient = {
         id: 'test-client-123',
+        user: undefined,
+        join: vi.fn(),
+      } as any;
+      const warnSpy = vi.spyOn(gateway['logger'], 'warn');
+
+      const result = await gateway.handleJoinCampaign(
+        { campaignId: 'campaign-abc' },
+        mockClient,
+      );
+
+      expect(mockClient.join).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        success: false,
+        message: 'Authentication required',
+      });
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unauthenticated client'),
+      );
+    });
+
+    it('should reject user joining campaign they do not own', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
+        join: vi.fn(),
+      } as any;
+
+      mockSupabaseService.getCampaignById.mockRejectedValueOnce(
+        new Error('Not found'),
+      );
+
+      const warnSpy = vi.spyOn(gateway['logger'], 'warn');
+
+      const result = await gateway.handleJoinCampaign(
+        { campaignId: 'campaign-abc' },
+        mockClient,
+      );
+
+      expect(mockClient.join).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        success: false,
+        message: 'Campaign not found or access denied',
+      });
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('attempted to join non-existent campaign'),
+      );
+    });
+
+    it('should join campaign room with valid campaign ID and ownership', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
         join: vi.fn().mockResolvedValue(undefined),
-      } as unknown as Socket;
+      } as any;
+
+      // Configure the mock for this test
+      mockSupabaseService.getCampaignById.mockResolvedValueOnce({
+        id: 'campaign-abc',
+        user_id: 'user-123',
+        name: 'Test Campaign',
+      });
+
       const logSpy = vi.spyOn(gateway['logger'], 'log');
 
       const result = await gateway.handleJoinCampaign(
@@ -77,6 +258,7 @@ describe('CampaignWebSocketGateway', () => {
         mockClient,
       );
 
+      expect(mockSupabaseService.getCampaignById).toHaveBeenCalledWith('campaign-abc', 'user-123');
       expect(mockClient.join).toHaveBeenCalledWith('campaign:campaign-abc');
       expect(result).toEqual({
         success: true,
@@ -91,8 +273,9 @@ describe('CampaignWebSocketGateway', () => {
     it('should reject invalid campaign ID (missing)', async () => {
       const mockClient = {
         id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
         join: vi.fn(),
-      } as unknown as Socket;
+      } as any;
       const warnSpy = vi.spyOn(gateway['logger'], 'warn');
 
       const result = await gateway.handleJoinCampaign(
@@ -111,8 +294,9 @@ describe('CampaignWebSocketGateway', () => {
     it('should reject invalid campaign ID (non-string)', async () => {
       const mockClient = {
         id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
         join: vi.fn(),
-      } as unknown as Socket;
+      } as any;
       const warnSpy = vi.spyOn(gateway['logger'], 'warn');
 
       const result = await gateway.handleJoinCampaign(
@@ -131,8 +315,15 @@ describe('CampaignWebSocketGateway', () => {
     it('should handle join errors gracefully', async () => {
       const mockClient = {
         id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
         join: vi.fn().mockRejectedValue(new Error('Socket error')),
-      } as unknown as Socket;
+      } as any;
+
+      mockSupabaseService.getCampaignById.mockResolvedValueOnce({
+        id: 'campaign-abc',
+        user_id: 'user-123',
+      });
+
       const errorSpy = vi.spyOn(gateway['logger'], 'error');
 
       const result = await gateway.handleJoinCampaign(
@@ -140,6 +331,7 @@ describe('CampaignWebSocketGateway', () => {
         mockClient,
       );
 
+      expect(mockClient.join).toHaveBeenCalled();
       expect(result).toEqual({
         success: false,
         message: 'Failed to join campaign',
@@ -149,11 +341,35 @@ describe('CampaignWebSocketGateway', () => {
   });
 
   describe('handleLeaveCampaign', () => {
+    it('should reject unauthenticated client', async () => {
+      const mockClient = {
+        id: 'test-client-123',
+        user: undefined,
+        leave: vi.fn(),
+      } as any;
+      const warnSpy = vi.spyOn(gateway['logger'], 'warn');
+
+      const result = await gateway.handleLeaveCampaign(
+        { campaignId: 'campaign-abc' },
+        mockClient,
+      );
+
+      expect(mockClient.leave).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        success: false,
+        message: 'Authentication required',
+      });
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unauthenticated client'),
+      );
+    });
+
     it('should leave campaign room with valid campaign ID', async () => {
       const mockClient = {
         id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
         leave: vi.fn().mockResolvedValue(undefined),
-      } as unknown as Socket;
+      } as any;
       const logSpy = vi.spyOn(gateway['logger'], 'log');
 
       const result = await gateway.handleLeaveCampaign(
@@ -175,8 +391,9 @@ describe('CampaignWebSocketGateway', () => {
     it('should reject invalid campaign ID', async () => {
       const mockClient = {
         id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
         leave: vi.fn(),
-      } as unknown as Socket;
+      } as any;
       const warnSpy = vi.spyOn(gateway['logger'], 'warn');
 
       const result = await gateway.handleLeaveCampaign(
@@ -195,8 +412,9 @@ describe('CampaignWebSocketGateway', () => {
     it('should handle leave errors gracefully', async () => {
       const mockClient = {
         id: 'test-client-123',
+        user: { id: 'user-123', email: 'test@example.com' },
         leave: vi.fn().mockRejectedValue(new Error('Socket error')),
-      } as unknown as Socket;
+      } as any;
       const errorSpy = vi.spyOn(gateway['logger'], 'error');
 
       const result = await gateway.handleLeaveCampaign(

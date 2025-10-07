@@ -9,7 +9,15 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, Injectable } from '@nestjs/common';
+import { supabaseAdmin } from '../config/supabase';
+import { User } from '@supabase/supabase-js';
+import { SupabaseService } from '../services/supabase.service';
+
+// Extend Socket interface to include authenticated user
+interface AuthenticatedSocket extends Socket {
+  user?: User;
+}
 
 interface JoinCampaignPayload {
   campaignId: string;
@@ -42,6 +50,7 @@ export interface RunStatusPayload {
   timestamp: string;
 }
 
+@Injectable()
 @WebSocketGateway({
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
@@ -57,15 +66,56 @@ export class CampaignWebSocketGateway
 
   private logger: Logger = new Logger('CampaignWebSocketGateway');
 
+  constructor(private readonly supabaseService: SupabaseService) {}
+
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
   }
 
-  handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+  async handleConnection(client: AuthenticatedSocket) {
+    this.logger.log(`Client attempting connection: ${client.id}`);
+
+    try {
+      // Extract token from query params or auth handshake
+      const token =
+        (client.handshake.query.token as string) ||
+        (client.handshake.auth?.token as string);
+
+      if (!token) {
+        this.logger.warn(
+          `Client ${client.id} disconnected: No authentication token provided`,
+        );
+        client.disconnect();
+        return;
+      }
+
+      // Validate token with Supabase
+      const { data, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !data.user) {
+        this.logger.warn(
+          `Client ${client.id} disconnected: Invalid or expired token`,
+        );
+        client.disconnect();
+        return;
+      }
+
+      // Attach user to socket
+      client.user = data.user;
+      this.logger.log(
+        `Client ${client.id} authenticated as user ${data.user.id}`,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Authentication error for client ${client.id}: ${errorMessage}`,
+      );
+      client.disconnect();
+    }
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: AuthenticatedSocket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     // Leave all rooms on disconnect
     const rooms = Array.from(client.rooms);
@@ -77,7 +127,7 @@ export class CampaignWebSocketGateway
   }
 
   @SubscribeMessage('ping')
-  handlePing(client: Socket): string {
+  handlePing(client: AuthenticatedSocket): string {
     this.logger.debug(`Ping received from client: ${client.id}`);
     return 'pong';
   }
@@ -85,9 +135,18 @@ export class CampaignWebSocketGateway
   @SubscribeMessage('join_campaign')
   async handleJoinCampaign(
     @MessageBody() data: JoinCampaignPayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
   ): Promise<{ success: boolean; message: string; campaignId?: string }> {
     try {
+      // Check if user is authenticated
+      if (!client.user) {
+        this.logger.warn(`Unauthenticated client ${client.id} attempted to join campaign`);
+        return {
+          success: false,
+          message: 'Authentication required',
+        };
+      }
+
       const { campaignId } = data;
 
       if (!campaignId || typeof campaignId !== 'string') {
@@ -95,6 +154,32 @@ export class CampaignWebSocketGateway
         return {
           success: false,
           message: 'Invalid campaign ID',
+        };
+      }
+
+      // Verify user owns the campaign
+      try {
+        const campaign = await this.supabaseService.getCampaignById(
+          campaignId,
+          client.user.id,
+        );
+
+        if (!campaign) {
+          this.logger.warn(
+            `Client ${client.id} attempted to join unauthorized campaign ${campaignId}`,
+          );
+          return {
+            success: false,
+            message: 'Campaign not found or access denied',
+          };
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Client ${client.id} attempted to join non-existent campaign ${campaignId}`,
+        );
+        return {
+          success: false,
+          message: 'Campaign not found or access denied',
         };
       }
 
@@ -122,9 +207,18 @@ export class CampaignWebSocketGateway
   @SubscribeMessage('leave_campaign')
   async handleLeaveCampaign(
     @MessageBody() data: LeaveCampaignPayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
   ): Promise<{ success: boolean; message: string; campaignId?: string }> {
     try {
+      // Check if user is authenticated
+      if (!client.user) {
+        this.logger.warn(`Unauthenticated client ${client.id} attempted to leave campaign`);
+        return {
+          success: false,
+          message: 'Authentication required',
+        };
+      }
+
       const { campaignId } = data;
 
       if (!campaignId || typeof campaignId !== 'string') {

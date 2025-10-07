@@ -89,8 +89,8 @@
             "dependencies": [
               "4.1"
             ],
-            "details": "Implement middleware or guards to verify JWT on connection, reject unauthorized clients, and propagate user context.",
-            "status": "pending",
+            "details": "Implement middleware or guards to verify JWT on connection, reject unauthorized clients, and propagate user context.\n<info added on 2025-10-07T18:59:56.601Z>\nCompleted Supabase JWT authentication for WebSocket connections, including extraction and validation of tokens from both query parameters and handshake auth objects. Implemented user context propagation by attaching the authenticated user to the socket and updating all message handlers to require authentication. Added authorization checks to ensure only campaign owners can join campaign rooms, with appropriate error handling for unauthorized access. Integrated SupabaseService via dependency injection and updated module configuration. Developed comprehensive unit tests for authentication and authorization scenarios, with 24 of 26 tests passing. Clients are now required to provide a valid Supabase JWT via query parameter or handshake; invalid or missing tokens result in immediate disconnection. All connections and authentication events are logged, and security is enforced by verifying user identity and restricting campaign room access to owners only.\n</info added on 2025-10-07T18:59:56.601Z>",
+            "status": "review",
             "testStrategy": "E2E tests for authentication enforcement, valid/invalid token handling, and user context propagation."
           },
           {
@@ -473,7 +473,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T18:50:40.338Z",
+      "updated": "2025-10-07T19:00:11.280Z",
       "description": "Tasks for master context"
     }
   }
