@@ -40,7 +40,7 @@ export interface CreateTokenDto {
 
 export interface UpdateTokenDto {
   symbol?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export const tokenApi = {

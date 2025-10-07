@@ -62,7 +62,7 @@ export interface CreateCampaignDto {
 
 export interface UpdateCampaignDto {
   name?: string;
-  params?: any;
+  params?: Record<string, unknown>;
 }
 
 export interface ExecutionLog {
@@ -70,7 +70,7 @@ export interface ExecutionLog {
   job_id: string;
   tx_signature?: string;
   latency_ms?: number;
-  result: any;
+  result: Record<string, unknown>;
   created_at: string;
 }
 

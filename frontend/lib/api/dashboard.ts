@@ -13,7 +13,7 @@ export interface ActivityItem {
   type: 'campaign_started' | 'campaign_stopped' | 'trade_executed' | 'error';
   message: string;
   timestamp: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export const dashboardApi = {
