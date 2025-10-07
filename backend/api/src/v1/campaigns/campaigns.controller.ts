@@ -200,6 +200,85 @@ export class CampaignsController {
         return { status: 'paused' }
     }
 
+    @Post(':id/resume')
+    async resumeCampaign(@Param('id') id: string, @CurrentUser() user: any) {
+        const campaign = await this.supabase.getCampaignById(id, user.id)
+        if (!campaign) {
+            throw new HttpException('Campaign not found', HttpStatus.NOT_FOUND)
+        }
+
+        if (campaign.status !== 'paused') {
+            throw new HttpException('Campaign must be paused to resume', HttpStatus.BAD_REQUEST)
+        }
+
+        // Update campaign status
+        await this.supabase.updateCampaign(id, user.id, { status: 'active' })
+
+        // Get paused run
+        const runs = await this.supabase.getCampaignRunsByCampaignId(id)
+        if (runs && runs.length > 0) {
+            const pausedRun = runs.find(r => r.status === 'paused')
+            if (pausedRun) {
+                await this.supabase.updateCampaignRun(pausedRun.id, { status: 'running' })
+
+                // Re-enqueue buy/sell jobs for active wallets
+                const wallets = await this.supabase.getWalletsByUserId(user.id)
+                const settings = await this.supabase.getUserSettings(user.id)
+                const tradingCfg = settings?.trading_config || {}
+                const minAmount =
+                    tradingCfg.buyLowerAmount != null
+                        ? Number(tradingCfg.buyLowerAmount)
+                        : process.env.BUY_LOWER_AMOUNT
+                          ? Number(process.env.BUY_LOWER_AMOUNT)
+                          : 0.001
+                const maxAmount =
+                    tradingCfg.buyUpperAmount != null
+                        ? Number(tradingCfg.buyUpperAmount)
+                        : process.env.BUY_UPPER_AMOUNT
+                          ? Number(process.env.BUY_UPPER_AMOUNT)
+                          : 0.002
+
+                for (const w of wallets) {
+                    const amount = Number((Math.random() * (maxAmount - minAmount) + minAmount).toFixed(6))
+
+                    // Create DB buy job
+                    const buyDbJob = await this.supabase.createJob({
+                        run_id: pausedRun.id,
+                        queue: 'trade.buy',
+                        type: 'buy-token',
+                        payload: { campaignId: id, walletId: w.id, amount },
+                        status: 'queued',
+                    })
+
+                    // Enqueue buy
+                    await this.tradeBuyQueue.add(
+                        'buy-token',
+                        { runId: pausedRun.id, campaignId: id, walletId: w.id, amount, dbJobId: buyDbJob.id },
+                        { delay: Math.round(Math.random() * 2000 + 1000) }
+                    )
+
+                    // Create DB sell job
+                    const sellDbJob = await this.supabase.createJob({
+                        run_id: pausedRun.id,
+                        queue: 'trade.sell',
+                        type: 'sell-token',
+                        payload: { campaignId: id, walletId: w.id },
+                        status: 'queued',
+                    })
+
+                    // Enqueue sell ~30s after buy
+                    await this.tradeSellQueue.add(
+                        'sell-token',
+                        { runId: pausedRun.id, campaignId: id, walletId: w.id, dbJobId: sellDbJob.id },
+                        { delay: 30000 }
+                    )
+                }
+            }
+        }
+
+        return { status: 'resumed' }
+    }
+
     @Post(':id/stop')
     async stopCampaign(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
@@ -217,7 +296,7 @@ export class CampaignsController {
             if (activeRun) {
                 await this.supabase.updateCampaignRun(activeRun.id, {
                     status: 'stopped',
-                    ended_at: new Date().toISOString(),
+                    ended_at: new Date(),
                 })
 
                 // Remove all jobs from queues for this campaign
@@ -288,10 +367,21 @@ export class CampaignsController {
     }
 
     @Post(':id/distribute')
-    async distribute(@Param('id') id: string, @CurrentUser() user: any) {
+    async distribute(
+        @Param('id') id: string,
+        @CurrentUser() user: any,
+        @Body() body?: { num_wallets?: number }
+    ) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
             throw new HttpException('Campaign not found', HttpStatus.NOT_FOUND)
+        }
+
+        // Determine number of wallets to distribute
+        const distributionNum = body?.num_wallets || Number(process.env.DISTRIBUTE_WALLET_NUM) || 5
+
+        if (distributionNum < 1 || distributionNum > 100) {
+            throw new HttpException('num_wallets must be between 1 and 100', HttpStatus.BAD_REQUEST)
         }
 
         // Ensure there is a running run
@@ -301,25 +391,39 @@ export class CampaignsController {
             run_id: run.id,
             queue: 'distribute',
             type: 'distribute-wallets',
-            payload: { campaignId: id },
+            payload: { campaignId: id, distributionNum },
             status: 'queued',
         })
 
         await this.distributeQueue.add('distribute-wallets', {
             runId: run.id,
             campaignId: id,
-            distributionNum: process.env.DISTRIBUTE_WALLET_NUM ? Number(process.env.DISTRIBUTE_WALLET_NUM) : 5,
+            distributionNum,
             dbJobId: dbJob.id,
         })
 
-        return { status: 'queued' }
+        return { status: 'queued', distributionNum, run }
     }
 
     @Post(':id/sell-only')
-    async startSellOnly(@Param('id') id: string, @CurrentUser() user: any) {
+    async startSellOnly(
+        @Param('id') id: string,
+        @CurrentUser() user: any,
+        @Body() body?: { total_times?: number }
+    ) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
             throw new HttpException('Campaign not found', HttpStatus.NOT_FOUND)
+        }
+
+        // Get total_times from body, user settings, or default to 1
+        const settings = await this.supabase.getUserSettings(user.id)
+        const totalTimes =
+            body?.total_times ||
+            (settings?.sell_config?.sellAllByTimes ? Number(settings.sell_config.sellAllByTimes) : 1)
+
+        if (totalTimes < 1 || totalTimes > 20) {
+            throw new HttpException('total_times must be between 1 and 20', HttpStatus.BAD_REQUEST)
         }
 
         await this.supabase.updateCampaign(id, user.id, { status: 'active' })
@@ -334,7 +438,7 @@ export class CampaignsController {
                 run_id: run.id,
                 queue: 'trade.sell',
                 type: 'sell-token',
-                payload: { campaignId: id, walletId: w.id, mode: 'sell-only' },
+                payload: { campaignId: id, walletId: w.id, mode: 'sell-only', totalTimes, stepIndex: 1 },
                 status: 'queued',
             })
 
@@ -344,11 +448,13 @@ export class CampaignsController {
                 campaignId: id,
                 walletId: w.id,
                 mode: 'sell-only',
+                totalTimes,
+                stepIndex: 1,
                 dbJobId: dbJob.id,
             })
         }
 
-        return { status: 'queued', run }
+        return { status: 'queued', run, totalTimes, walletsQueued: wallets.length }
     }
 
     @Post(':id/gather-funds')
