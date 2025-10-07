@@ -106,7 +106,7 @@ export class CampaignsController {
             campaignId: id,
             status: 'running',
             startedAt: run.started_at,
-            timestamp: new Date().toISOString(),
+            
         })
 
         // Create DB job for gather
@@ -126,7 +126,7 @@ export class CampaignsController {
             status: 'queued',
             queue: 'gather',
             type: 'gather-pool-info',
-            timestamp: new Date().toISOString(),
+            
         })
 
         // Enqueue initial gather job
@@ -215,7 +215,7 @@ export class CampaignsController {
                     status: 'paused',
                     startedAt: updatedRun.started_at,
                     endedAt: updatedRun.ended_at,
-                    timestamp: new Date().toISOString(),
+                    
                 })
 
                 // Pause jobs in all queues for this campaign
@@ -262,7 +262,7 @@ export class CampaignsController {
                     status: 'running',
                     startedAt: updatedRun.started_at,
                     endedAt: updatedRun.ended_at,
-                    timestamp: new Date().toISOString(),
+                    
                 })
 
                 // Re-enqueue buy/sell jobs for active wallets
@@ -350,7 +350,7 @@ export class CampaignsController {
                     status: 'stopped',
                     startedAt: updatedRun.started_at,
                     endedAt: updatedRun.ended_at,
-                    timestamp: new Date().toISOString(),
+                    
                 })
 
                 // Remove all jobs from queues for this campaign
@@ -447,7 +447,7 @@ export class CampaignsController {
             campaignId: id,
             status: 'running',
             startedAt: run.started_at,
-            timestamp: new Date().toISOString(),
+            
         })
 
         const dbJob = await this.supabase.createJob({
@@ -498,7 +498,7 @@ export class CampaignsController {
             campaignId: id,
             status: 'running',
             startedAt: run.started_at,
-            timestamp: new Date().toISOString(),
+            
         })
 
         // Fetch user's active wallets
@@ -544,7 +544,7 @@ export class CampaignsController {
             campaignId: id,
             status: 'running',
             startedAt: run.started_at,
-            timestamp: new Date().toISOString(),
+            
         })
 
         const dbJob = await this.supabase.createJob({

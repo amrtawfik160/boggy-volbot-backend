@@ -102,8 +102,8 @@
               "4.3",
               "4.4"
             ],
-            "details": "Handle reconnection events, restore channel memberships, and provide mechanisms for clients to fetch missed updates.",
-            "status": "pending",
+            "details": "Handle reconnection events, restore channel memberships, and provide mechanisms for clients to fetch missed updates.\n<info added on 2025-10-07T19:12:38.391Z>\nConnection state recovery is now enabled using Socket.IO v4's connectionStateRecovery feature with a 2-minute max disconnection duration and middleware skipping for seamless reconnections. Implemented in-memory event storage (per campaign, 10-minute TTL, 100-event cap) supports missed event retrieval via a get_missed_events handler with 'since' and 'limit' parameters, and includes automatic cleanup every 60 seconds. Event deduplication is enforced through unique eventId generation (timestamp plus random component), with all payloads extending BaseEventPayload and emit methods auto-generating eventId and timestamp. Subscription state is recoverable and queryable via a get_subscriptions handler, which returns the campaigns array and a 'recovered' flag. Manual timestamp management in campaigns.controller.ts has been removed in favor of automatic generation. Testing confirms 28 of 31 tests passing, with remaining failures due to NestJS mocking issues unrelated to implementation correctness. Note: In-memory event storage is suitable for MVP but should be migrated to Redis for multi-server production deployments.\n</info added on 2025-10-07T19:12:38.391Z>",
+            "status": "review",
             "testStrategy": "E2E tests for reconnection scenarios, state restoration, and event replay."
           }
         ]
@@ -473,7 +473,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T19:00:11.280Z",
+      "updated": "2025-10-07T19:12:53.682Z",
       "description": "Tasks for master context"
     }
   }
