@@ -78,8 +78,8 @@
             "dependencies": [
               "4.2"
             ],
-            "details": "Define event payloads, trigger emissions on relevant backend changes, and ensure correct delivery to channel members.",
-            "status": "pending",
+            "details": "Define event payloads, trigger emissions on relevant backend changes, and ensure correct delivery to channel members.\n<info added on 2025-10-07T18:50:25.736Z>\nCompleted implementation of job and run status event emission:\n\n- Defined and exported JobStatusPayload and RunStatusPayload interfaces in websocket.gateway.ts, specifying all required fields for job and run status updates.\n- Added emitJobStatus() and emitRunStatus() methods to the gateway, emitting 'job:status' and 'run:status' events to campaign subscribers using emitToCampaign(), with debug logging for all emissions.\n- Integrated CampaignWebSocketGateway into CampaignsController and wired run status event emission at all campaign run lifecycle points (start, pause, resume, stop, distribute, sell-only, gather-funds), as well as job status emission on job creation.\n- Developed comprehensive unit tests for both emitJobStatus() and emitRunStatus(), covering basic and error/summary scenarios; all 19 tests are passing.\n- Noted that job status updates from workers (processing, succeeded, failed) are not yet emitting WebSocket events; future worker-side emission may require HTTP, Redis pub/sub, or Supabase realtime integration.\n- All events use the 'campaign:{id}' room naming pattern and follow the 'job:status'/'run:status' event naming convention.\n</info added on 2025-10-07T18:50:25.736Z>",
+            "status": "review",
             "testStrategy": "E2E tests for event emission, payload correctness, and client reception."
           },
           {
@@ -473,7 +473,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T18:40:57.754Z",
+      "updated": "2025-10-07T18:50:40.338Z",
       "description": "Tasks for master context"
     }
   }

@@ -19,6 +19,29 @@ interface LeaveCampaignPayload {
   campaignId: string;
 }
 
+// Event payload interfaces
+export interface JobStatusPayload {
+  jobId: string;
+  runId: string;
+  campaignId: string;
+  status: 'queued' | 'processing' | 'succeeded' | 'failed' | 'cancelled';
+  queue: string;
+  type: string;
+  attempts?: number;
+  error?: any;
+  timestamp: string;
+}
+
+export interface RunStatusPayload {
+  runId: string;
+  campaignId: string;
+  status: 'running' | 'paused' | 'stopped' | 'completed' | 'failed';
+  startedAt: string;
+  endedAt?: string;
+  summary?: any;
+  timestamp: string;
+}
+
 @WebSocketGateway({
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
@@ -149,5 +172,25 @@ export class CampaignWebSocketGateway
     const roomName = `campaign:${campaignId}`;
     const sockets = await this.server.in(roomName).fetchSockets();
     return sockets.length;
+  }
+
+  /**
+   * Emit a job status update event to campaign subscribers
+   */
+  emitJobStatus(payload: JobStatusPayload): void {
+    this.emitToCampaign(payload.campaignId, 'job:status', payload);
+    this.logger.debug(
+      `Emitted job status update for job ${payload.jobId}: ${payload.status}`,
+    );
+  }
+
+  /**
+   * Emit a run status update event to campaign subscribers
+   */
+  emitRunStatus(payload: RunStatusPayload): void {
+    this.emitToCampaign(payload.campaignId, 'run:status', payload);
+    this.logger.debug(
+      `Emitted run status update for run ${payload.runId}: ${payload.status}`,
+    );
   }
 }

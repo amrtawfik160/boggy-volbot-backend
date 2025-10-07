@@ -258,4 +258,108 @@ describe('CampaignWebSocketGateway', () => {
       expect(count).toBe(0);
     });
   });
+
+  describe('emitJobStatus', () => {
+    it('should emit job status event to campaign room', () => {
+      const mockServer = {
+        to: vi.fn().mockReturnThis(),
+        emit: vi.fn(),
+      } as unknown as Server;
+      gateway.server = mockServer;
+      const debugSpy = vi.spyOn(gateway['logger'], 'debug');
+
+      const payload = {
+        jobId: 'job-123',
+        runId: 'run-456',
+        campaignId: 'campaign-abc',
+        status: 'succeeded' as const,
+        queue: 'trade.buy',
+        type: 'buy-token',
+        timestamp: '2025-10-07T12:00:00Z',
+      };
+
+      gateway.emitJobStatus(payload);
+
+      expect(mockServer.to).toHaveBeenCalledWith('campaign:campaign-abc');
+      expect(mockServer.emit).toHaveBeenCalledWith('job:status', payload);
+      expect(debugSpy).toHaveBeenCalledWith(
+        'Emitted job status update for job job-123: succeeded',
+      );
+    });
+
+    it('should emit job status with error details', () => {
+      const mockServer = {
+        to: vi.fn().mockReturnThis(),
+        emit: vi.fn(),
+      } as unknown as Server;
+      gateway.server = mockServer;
+
+      const payload = {
+        jobId: 'job-123',
+        runId: 'run-456',
+        campaignId: 'campaign-abc',
+        status: 'failed' as const,
+        queue: 'trade.sell',
+        type: 'sell-token',
+        attempts: 3,
+        error: { message: 'Transaction failed' },
+        timestamp: '2025-10-07T12:00:00Z',
+      };
+
+      gateway.emitJobStatus(payload);
+
+      expect(mockServer.to).toHaveBeenCalledWith('campaign:campaign-abc');
+      expect(mockServer.emit).toHaveBeenCalledWith('job:status', payload);
+    });
+  });
+
+  describe('emitRunStatus', () => {
+    it('should emit run status event to campaign room', () => {
+      const mockServer = {
+        to: vi.fn().mockReturnThis(),
+        emit: vi.fn(),
+      } as unknown as Server;
+      gateway.server = mockServer;
+      const debugSpy = vi.spyOn(gateway['logger'], 'debug');
+
+      const payload = {
+        runId: 'run-456',
+        campaignId: 'campaign-abc',
+        status: 'running' as const,
+        startedAt: '2025-10-07T12:00:00Z',
+        timestamp: '2025-10-07T12:00:00Z',
+      };
+
+      gateway.emitRunStatus(payload);
+
+      expect(mockServer.to).toHaveBeenCalledWith('campaign:campaign-abc');
+      expect(mockServer.emit).toHaveBeenCalledWith('run:status', payload);
+      expect(debugSpy).toHaveBeenCalledWith(
+        'Emitted run status update for run run-456: running',
+      );
+    });
+
+    it('should emit run status with end time and summary', () => {
+      const mockServer = {
+        to: vi.fn().mockReturnThis(),
+        emit: vi.fn(),
+      } as unknown as Server;
+      gateway.server = mockServer;
+
+      const payload = {
+        runId: 'run-456',
+        campaignId: 'campaign-abc',
+        status: 'completed' as const,
+        startedAt: '2025-10-07T12:00:00Z',
+        endedAt: '2025-10-07T13:00:00Z',
+        summary: { totalVolume: 1000, successfulTrades: 50 },
+        timestamp: '2025-10-07T13:00:00Z',
+      };
+
+      gateway.emitRunStatus(payload);
+
+      expect(mockServer.to).toHaveBeenCalledWith('campaign:campaign-abc');
+      expect(mockServer.emit).toHaveBeenCalledWith('run:status', payload);
+    });
+  });
 });

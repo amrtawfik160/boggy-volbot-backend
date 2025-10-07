@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpExcept
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard'
 import { CurrentUser } from '../../decorators/user.decorator'
 import { SupabaseService } from '../../services/supabase.service'
+import { CampaignWebSocketGateway } from '../../websocket/websocket.gateway'
 import { Queue } from 'bullmq'
 import IORedis from 'ioredis'
 
@@ -34,7 +35,10 @@ export class CampaignsController {
     private distributeQueue: Queue
     private fundsGatherQueue: Queue
 
-    constructor(private readonly supabase: SupabaseService) {
+    constructor(
+        private readonly supabase: SupabaseService,
+        private readonly gateway: CampaignWebSocketGateway,
+    ) {
         const redisConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379')
 
         this.gatherQueue = new Queue('gather', { connection: redisConnection })
@@ -96,6 +100,15 @@ export class CampaignsController {
             status: 'running',
         })
 
+        // Emit run status event
+        this.gateway.emitRunStatus({
+            runId: run.id,
+            campaignId: id,
+            status: 'running',
+            startedAt: run.started_at,
+            timestamp: new Date().toISOString(),
+        })
+
         // Create DB job for gather
         const dbJob = await this.supabase.createJob({
             run_id: run.id,
@@ -103,6 +116,17 @@ export class CampaignsController {
             type: 'gather-pool-info',
             payload: { campaignId: id, poolId: campaign.pool_id },
             status: 'queued',
+        })
+
+        // Emit job status event
+        this.gateway.emitJobStatus({
+            jobId: dbJob.id,
+            runId: run.id,
+            campaignId: id,
+            status: 'queued',
+            queue: 'gather',
+            type: 'gather-pool-info',
+            timestamp: new Date().toISOString(),
         })
 
         // Enqueue initial gather job
@@ -182,7 +206,17 @@ export class CampaignsController {
         if (runs && runs.length > 0) {
             const activeRun = runs.find(r => r.status === 'running')
             if (activeRun) {
-                await this.supabase.updateCampaignRun(activeRun.id, { status: 'paused' })
+                const updatedRun = await this.supabase.updateCampaignRun(activeRun.id, { status: 'paused' })
+
+                // Emit run status event
+                this.gateway.emitRunStatus({
+                    runId: updatedRun.id,
+                    campaignId: id,
+                    status: 'paused',
+                    startedAt: updatedRun.started_at,
+                    endedAt: updatedRun.ended_at,
+                    timestamp: new Date().toISOString(),
+                })
 
                 // Pause jobs in all queues for this campaign
                 const queues = [this.gatherQueue, this.tradeBuyQueue, this.tradeSellQueue]
@@ -219,7 +253,17 @@ export class CampaignsController {
         if (runs && runs.length > 0) {
             const pausedRun = runs.find(r => r.status === 'paused')
             if (pausedRun) {
-                await this.supabase.updateCampaignRun(pausedRun.id, { status: 'running' })
+                const updatedRun = await this.supabase.updateCampaignRun(pausedRun.id, { status: 'running' })
+
+                // Emit run status event
+                this.gateway.emitRunStatus({
+                    runId: updatedRun.id,
+                    campaignId: id,
+                    status: 'running',
+                    startedAt: updatedRun.started_at,
+                    endedAt: updatedRun.ended_at,
+                    timestamp: new Date().toISOString(),
+                })
 
                 // Re-enqueue buy/sell jobs for active wallets
                 const wallets = await this.supabase.getWalletsByUserId(user.id)
@@ -294,9 +338,19 @@ export class CampaignsController {
         if (runs && runs.length > 0) {
             const activeRun = runs.find(r => r.status === 'running' || r.status === 'paused')
             if (activeRun) {
-                await this.supabase.updateCampaignRun(activeRun.id, {
+                const updatedRun = await this.supabase.updateCampaignRun(activeRun.id, {
                     status: 'stopped',
                     ended_at: new Date(),
+                })
+
+                // Emit run status event
+                this.gateway.emitRunStatus({
+                    runId: updatedRun.id,
+                    campaignId: id,
+                    status: 'stopped',
+                    startedAt: updatedRun.started_at,
+                    endedAt: updatedRun.ended_at,
+                    timestamp: new Date().toISOString(),
                 })
 
                 // Remove all jobs from queues for this campaign
@@ -387,6 +441,15 @@ export class CampaignsController {
         // Ensure there is a running run
         const run = await this.supabase.createCampaignRun({ campaign_id: id, status: 'running' })
 
+        // Emit run status event
+        this.gateway.emitRunStatus({
+            runId: run.id,
+            campaignId: id,
+            status: 'running',
+            startedAt: run.started_at,
+            timestamp: new Date().toISOString(),
+        })
+
         const dbJob = await this.supabase.createJob({
             run_id: run.id,
             queue: 'distribute',
@@ -429,6 +492,15 @@ export class CampaignsController {
         await this.supabase.updateCampaign(id, user.id, { status: 'active' })
         const run = await this.supabase.createCampaignRun({ campaign_id: id, status: 'running' })
 
+        // Emit run status event
+        this.gateway.emitRunStatus({
+            runId: run.id,
+            campaignId: id,
+            status: 'running',
+            startedAt: run.started_at,
+            timestamp: new Date().toISOString(),
+        })
+
         // Fetch user's active wallets
         const wallets = await this.supabase.getWalletsByUserId(user.id)
 
@@ -465,6 +537,16 @@ export class CampaignsController {
         }
 
         const run = await this.supabase.createCampaignRun({ campaign_id: id, status: 'running' })
+
+        // Emit run status event
+        this.gateway.emitRunStatus({
+            runId: run.id,
+            campaignId: id,
+            status: 'running',
+            startedAt: run.started_at,
+            timestamp: new Date().toISOString(),
+        })
+
         const dbJob = await this.supabase.createJob({
             run_id: run.id,
             queue: 'funds.gather',
