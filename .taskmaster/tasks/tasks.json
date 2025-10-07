@@ -285,7 +285,62 @@
           2
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Key Management Structure",
+            "description": "Define and document the architecture for per-user Data Encryption Keys (DEKs), Key Encryption Keys (KEKs), and the master key sourced from environment variables.",
+            "dependencies": [],
+            "details": "Specify how DEKs are generated per user, how each DEK is encrypted with a KEK, and how the KEK is derived or protected using a master key from environment variables. Include secure storage and retrieval mechanisms.\n<info added on 2025-10-07T19:58:02.750Z>\nCompleted key management architecture design and documentation:\n\n- Reviewed backend/api/src/services/encryption.service.ts for current encryption logic.\n- Established a three-tier key hierarchy:\n  - Master Encryption Key (MEK) sourced from environment variables as the root secret.\n  - Key Encryption Key (KEK) derived from MEK using HKDF-SHA256.\n  - Per-user Data Encryption Keys (DEKs), 32-byte AES-256 keys, encrypted with KEK.\n  - Private keys encrypted with user's DEK using AES-256-GCM.\n- Authored backend/api/docs/KEY_MANAGEMENT.md with:\n  - Visual diagram of key hierarchy.\n  - Definitions of key types, roles, and storage mechanisms.\n  - Database schema for user_encryption_keys.\n  - Detailed workflows for wallet creation and transaction signing.\n  - Procedures for generating MEK, KEK, and DEKs.\n  - Key rotation protocols for both per-user DEKs and the global MEK.\n  - Security best practices for key storage and access control.\n  - Error handling strategies.\n  - Migration plan for existing wallets.\n  - Compliance notes for PCI DSS, SOC 2, and GDPR.\n- Architecture follows envelope encryption pattern with strict key separation.\n</info added on 2025-10-07T19:58:02.750Z>",
+            "status": "done",
+            "testStrategy": "Review design documentation and verify key hierarchy with unit tests for key generation and wrapping."
+          },
+          {
+            "id": 2,
+            "title": "Implement AES-256-GCM Encryption and Decryption",
+            "description": "Develop functions to encrypt and decrypt wallet private keys using AES-256-GCM, leveraging node:crypto or libsodium.",
+            "dependencies": [
+              "9.1"
+            ],
+            "details": "Ensure encryption outputs ciphertext, nonce (IV), and authentication tag. Implement error handling for integrity/authenticity failures. Follow best practices for IV generation and storage.",
+            "status": "pending",
+            "testStrategy": "Unit tests for encryption and decryption, including integrity check failures and edge cases."
+          },
+          {
+            "id": 3,
+            "title": "Integrate Per-User DEK and KEK Workflow",
+            "description": "Connect the key management logic to the encryption/decryption routines, ensuring each user's private key is encrypted with their DEK, which is itself encrypted by the KEK.",
+            "dependencies": [
+              "9.2"
+            ],
+            "details": "Implement logic to retrieve and decrypt the DEK using the KEK and master key before decrypting the private key. Ensure DEKs and KEKs are never exposed in plaintext outside secure memory.",
+            "status": "pending",
+            "testStrategy": "Integration tests to verify correct key retrieval, wrapping, and unwrapping for multiple users."
+          },
+          {
+            "id": 4,
+            "title": "Implement Controlled Decryption for Transaction Signing",
+            "description": "Restrict decryption of wallet private keys to the transaction signing process only, ensuring decrypted keys are never persisted.",
+            "dependencies": [
+              "9.3"
+            ],
+            "details": "Integrate decryption logic with the transaction signing workflow. Ensure decrypted keys are securely erased from memory after use.",
+            "status": "pending",
+            "testStrategy": "Integration tests to confirm decryption occurs only during signing and keys are not retained post-operation."
+          },
+          {
+            "id": 5,
+            "title": "Document and Implement Key Rotation Procedures",
+            "description": "Develop and document procedures for rotating KEKs and the master key, including re-encrypting DEKs and updating affected records.",
+            "dependencies": [
+              "9.1",
+              "9.3"
+            ],
+            "details": "Provide clear documentation and scripts for key rotation. Ensure minimal downtime and data integrity during rotation. Address how to handle active sessions and rollback in case of failure.",
+            "status": "pending",
+            "testStrategy": "Manual and automated tests for key rotation, including rollback and verification of re-encrypted data."
+          }
+        ]
       },
       {
         "id": 10,
@@ -585,7 +640,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T19:55:32.607Z",
+      "updated": "2025-10-07T19:57:58.329Z",
       "description": "Tasks for master context"
     }
   }
