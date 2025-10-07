@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { campaignApi, type Campaign, type CampaignStatus, type CampaignRun, type ExecutionLog } from '@/lib/api/campaigns'
+import { useCampaignWebSocket } from '@/hooks/use-campaign-websocket'
+import { toast } from 'sonner'
 
 export default function CampaignDetailPage() {
   const router = useRouter()
@@ -15,16 +17,53 @@ export default function CampaignDetailPage() {
   const [logs, setLogs] = useState<ExecutionLog[]>([])
   const [loading, setLoading] = useState(true)
 
+  // WebSocket connection for real-time updates
+  const {
+    isConnected,
+    isAuthenticated,
+    joinCampaign,
+    leaveCampaign,
+    error: wsError,
+  } = useCampaignWebSocket({
+    onJobStatus: (payload) => {
+      // Reload logs when job status changes
+      if (payload.campaignId === campaignId) {
+        loadLogs()
+      }
+    },
+    onRunStatus: (payload) => {
+      // Update status and runs when run status changes
+      if (payload.campaignId === campaignId) {
+        loadStatus()
+        loadRuns()
+      }
+    },
+    onConnect: () => {
+      console.log('WebSocket connected, joining campaign:', campaignId)
+    },
+    onError: (error) => {
+      console.error('WebSocket error:', error)
+    },
+  })
+
   useEffect(() => {
     loadCampaignData()
-    
-    // Refresh status every 5 seconds
-    const interval = setInterval(() => {
-      loadStatus()
-    }, 5000)
-
-    return () => clearInterval(interval)
   }, [campaignId])
+
+  // Join campaign room when WebSocket is connected
+  useEffect(() => {
+    if (isConnected && isAuthenticated && campaignId) {
+      joinCampaign(campaignId).catch((err) => {
+        console.error('Failed to join campaign room:', err)
+      })
+
+      return () => {
+        leaveCampaign(campaignId).catch((err) => {
+          console.error('Failed to leave campaign room:', err)
+        })
+      }
+    }
+  }, [isConnected, isAuthenticated, campaignId, joinCampaign, leaveCampaign])
 
   const loadCampaignData = async () => {
     try {
@@ -41,7 +80,7 @@ export default function CampaignDetailPage() {
       setRuns(runsData)
       setLogs(logsData)
     } catch (err: any) {
-      alert(err.message || 'Failed to load campaign')
+      toast.error(err.message || 'Failed to load campaign')
       router.push('/campaigns')
     } finally {
       setLoading(false)
@@ -57,32 +96,56 @@ export default function CampaignDetailPage() {
     }
   }
 
+  const loadRuns = async () => {
+    try {
+      const runsData = await campaignApi.getRuns(campaignId)
+      setRuns(runsData)
+    } catch (err) {
+      console.error('Failed to refresh runs:', err)
+    }
+  }
+
+  const loadLogs = async () => {
+    try {
+      const logsData = await campaignApi.getLogs(campaignId, 50)
+      setLogs(logsData)
+    } catch (err) {
+      console.error('Failed to refresh logs:', err)
+    }
+  }
+
   const handleStart = async () => {
+    const toastId = toast.loading('Starting campaign...')
     try {
       await campaignApi.start(campaignId)
+      toast.success('Campaign started successfully', { id: toastId })
       loadCampaignData()
     } catch (err: any) {
-      alert(err.message || 'Failed to start campaign')
+      toast.error(err.message || 'Failed to start campaign', { id: toastId })
     }
   }
 
   const handlePause = async () => {
+    const toastId = toast.loading('Pausing campaign...')
     try {
       await campaignApi.pause(campaignId)
+      toast.success('Campaign paused successfully', { id: toastId })
       loadCampaignData()
     } catch (err: any) {
-      alert(err.message || 'Failed to pause campaign')
+      toast.error(err.message || 'Failed to pause campaign', { id: toastId })
     }
   }
 
   const handleStop = async () => {
     if (!confirm('Are you sure you want to stop this campaign?')) return
 
+    const toastId = toast.loading('Stopping campaign...')
     try {
       await campaignApi.stop(campaignId)
+      toast.success('Campaign stopped successfully', { id: toastId })
       loadCampaignData()
     } catch (err: any) {
-      alert(err.message || 'Failed to stop campaign')
+      toast.error(err.message || 'Failed to stop campaign', { id: toastId })
     }
   }
 
@@ -121,14 +184,26 @@ export default function CampaignDetailPage() {
             ← Back to campaigns
           </button>
           <h1 className="text-2xl font-bold text-gray-900">{campaign.name}</h1>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2 flex items-center gap-3 flex-wrap">
             <span className={`inline-flex items-center px-2 py-1 text-xs font-medium ${getStatusBadgeClass(campaign.status)}`}>
               {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
             </span>
             <span className="text-sm text-gray-500">
               Created {new Date(campaign.created_at).toLocaleDateString()}
             </span>
+            {/* WebSocket Connection Status */}
+            <div className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+              <span className="text-xs text-gray-500">
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
           </div>
+          {wsError && (
+            <div className="mt-2 text-xs text-red-600">
+              Connection error: {wsError.message}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">

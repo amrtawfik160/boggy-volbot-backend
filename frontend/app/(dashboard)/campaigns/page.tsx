@@ -10,12 +10,22 @@ import {
   LoadingSpinner,
   type Column,
 } from '@/components/dashboard'
+import { useCampaignWebSocket } from '@/hooks/use-campaign-websocket'
+import { toast } from 'sonner'
 
 export default function CampaignsPage() {
   const router = useRouter()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // WebSocket connection for real-time updates
+  const { isConnected } = useCampaignWebSocket({
+    onRunStatus: () => {
+      // Reload campaigns when any run status changes
+      loadCampaigns()
+    },
+  })
 
   useEffect(() => {
     loadCampaigns()
@@ -35,31 +45,37 @@ export default function CampaignsPage() {
   }
 
   const handleStartCampaign = async (id: string) => {
+    const toastId = toast.loading('Starting campaign...')
     try {
       await campaignApi.start(id)
+      toast.success('Campaign started successfully', { id: toastId })
       loadCampaigns()
     } catch (err: any) {
-      alert(err.message || 'Failed to start campaign')
+      toast.error(err.message || 'Failed to start campaign', { id: toastId })
     }
   }
 
   const handlePauseCampaign = async (id: string) => {
+    const toastId = toast.loading('Pausing campaign...')
     try {
       await campaignApi.pause(id)
+      toast.success('Campaign paused successfully', { id: toastId })
       loadCampaigns()
     } catch (err: any) {
-      alert(err.message || 'Failed to pause campaign')
+      toast.error(err.message || 'Failed to pause campaign', { id: toastId })
     }
   }
 
   const handleStopCampaign = async (id: string) => {
     if (!confirm('Are you sure you want to stop this campaign?')) return
 
+    const toastId = toast.loading('Stopping campaign...')
     try {
       await campaignApi.stop(id)
+      toast.success('Campaign stopped successfully', { id: toastId })
       loadCampaigns()
     } catch (err: any) {
-      alert(err.message || 'Failed to stop campaign')
+      toast.error(err.message || 'Failed to stop campaign', { id: toastId })
     }
   }
 
@@ -187,7 +203,16 @@ export default function CampaignsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Campaigns</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Campaigns</h1>
+            {/* WebSocket Connection Status */}
+            <div className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+              <span className="text-xs text-gray-500">
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
+          </div>
           <p className="mt-1 text-sm text-gray-500">
             Manage your volume generation campaigns
           </p>

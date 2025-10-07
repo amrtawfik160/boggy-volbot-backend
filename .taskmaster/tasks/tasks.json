@@ -151,7 +151,7 @@
               "6.1"
             ],
             "details": "Use TypeScript interfaces for props and state, leverage UI library component prop types, and ensure accessibility and modularity. Follow best practices for component structure and naming.\n<info added on 2025-10-07T19:21:54.609Z>\nBegin refactoring existing dashboard pages by extracting reusable components such as MetricCard, StatusBadge, DataTable, and FormStep, and organizing them under the components/dashboard/ directory. Update all component props to use improved TypeScript interfaces for better type safety and clarity. Enhance mobile-first responsive design by applying more granular breakpoints and layout adjustments beyond basic sm/lg, ensuring optimal usability on all devices. Replace polling in the campaign detail view with proper WebSocket integration for real-time updates, and extend WebSocket usage to other relevant components. Improve accessibility by adding ARIA labels, ensuring keyboard navigation, and following best practices for UI library accessibility features. Identify and eliminate repeated code patterns across pages, consolidating logic and styles into shared utilities or components.\n</info added on 2025-10-07T19:21:54.609Z>",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Component tests with Vitest and Testing Library for each UI element."
           },
           {
@@ -162,7 +162,7 @@
               "6.2"
             ],
             "details": "Utilize Axios or fetch with TypeScript types, React Query for data fetching, and implement WebSocket hooks for real-time updates. Handle authentication, error states, and optimistic UI updates.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Integration tests for API and WebSocket interactions, including error handling and state updates."
           },
           {
@@ -529,7 +529,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T19:20:56.488Z",
+      "updated": "2025-10-07T19:28:10.673Z",
       "description": "Tasks for master context"
     }
   }
