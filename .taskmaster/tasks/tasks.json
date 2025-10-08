@@ -55,7 +55,7 @@
               "3.1"
             ],
             "details": "Inject executor selection into worker job handlers, ensuring the correct executor is chosen for each campaign according to its configuration.\n<info added on 2025-10-08T06:54:12.259Z>\nCompleted implementation of executor selection logic based on campaign configuration.\n\nImplementation Summary:\n\n1. Refactored TradingService (backend/workers/src/core/legacy/services/trading-service.ts):\n   - Added TradingServiceConfig interface to support executor configuration\n   - Modified constructor to accept TradingServiceConfig instead of just Connection\n   - Removed direct calls to execute() and bundle() functions\n   - Added createExecutor() method that uses ExecutorFactory.fromEnvironment()\n   - Updated executeBuyTransaction() and executeSellTransaction() to use TransactionExecutor interface\n   - Now dynamically creates appropriate executor (Legacy or Jito) based on useJito flag\n\n2. Updated TradeBuyWorker (backend/workers/src/workers/TradeBuyWorker.ts):\n   - Added logic to load Jito configuration from user settings or environment variables\n   - Builds TradingServiceConfig with jitoConfig when useJito is true\n   - Validates that JITO_KEY is present when Jito is enabled\n   - Passes complete configuration to TradingService constructor\n   - User settings (user_settings.jito_config.useJito) override campaign params\n\n3. Updated TradeSellWorker (backend/workers/src/workers/TradeSellWorker.ts):\n   - Implemented same Jito configuration loading logic as TradeBuyWorker\n   - Creates TradingService with full executor configuration\n   - Both handleProgressiveSell() and handleNormalSell() use configured TradingService\n   - Consistent executor selection across all sell operations\n\n4. Configuration Priority:\n   - User Settings (user_settings.jito_config) > Campaign Params (campaign.params.useJito) > Default (false)\n   - Jito configuration sources: user_settings.jito_config.* || process.env.* || hardcoded defaults\n   - blockEngineUrl default: 'https://mainnet.block-engine.jito.wtf'\n   - jitoTipAmount default: 0.0001 SOL\n   - bundleTransactionLimit: 4, bundleTimeoutMs: 30000\n\n5. Integration Tests Created:\n   - trading-service.spec.ts: Tests executor selection in TradingService\n   - executor-selection.integration.spec.ts: Tests worker-level configuration logic\n   - Validates configuration priority, Jito config assembly, error handling\n\nKey Benefits:\n- Clean separation: Workers handle config, TradingService handles execution\n- Extensible: Easy to add new executor types in the future\n- Testable: Executor selection logic is isolated and tested\n- Flexible: Per-user and per-campaign Jito configuration\n- Backward compatible: Existing campaigns continue to work\n\nFiles Modified:\n- backend/workers/src/core/legacy/services/trading-service.ts\n- backend/workers/src/workers/TradeBuyWorker.ts\n- backend/workers/src/workers/TradeSellWorker.ts\n\nFiles Created:\n- backend/workers/src/core/legacy/services/__tests__/trading-service.spec.ts\n- backend/workers/src/workers/__tests__/executor-selection.integration.spec.ts\n\nNext Steps: \nTask 3.3 (Make Jito Tip and Auth Keypair Configurable) is partially complete - the configuration is already implemented via user_settings.jito_config and environment variables. May need to add API endpoints for managing these settings.\n</info added on 2025-10-08T06:54:12.259Z>",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Integration tests simulating various campaign configurations to confirm correct executor selection and invocation."
           },
           {
@@ -65,8 +65,8 @@
             "dependencies": [
               "3.1"
             ],
-            "details": "Expose environment variables or configuration fields for Jito tip and auth keypair, and ensure these are properly injected into the Jito executor.",
-            "status": "pending",
+            "details": "Expose environment variables or configuration fields for Jito tip and auth keypair, and ensure these are properly injected into the Jito executor.\n<info added on 2025-10-08T07:11:36.049Z>\nCompleted implementation of Jito tip and auth keypair configuration:\n\nSummary:\nTask 3.3 is now complete. The configuration infrastructure was already implemented in task 3.2, but this task added comprehensive validation, testing, and documentation.\n\nImplementation Details:\n\n1. Created Validation DTOs (backend/api/src/v1/settings/dto/):\n   - JitoConfigDto: Validates all Jito configuration fields\n   - UpdateSettingsDto: Validates the entire settings update request\n   - Validation rules:\n     * jitoKey: Base58-encoded, 87-88 characters, required when useJito=true\n     * jitoFee: 0.00001-1.0 SOL range\n     * bundleTransactionLimit: 1-5 transactions\n     * bundleTimeoutMs: 5000-60000ms\n     * blockEngineUrl: Valid HTTP/HTTPS URL\n\n2. Updated Settings Controller (backend/api/src/v1/settings/settings.controller.ts):\n   - Added ValidationPipe with strict validation\n   - Added custom validation for jitoKey requirement\n   - Improved error handling with descriptive messages\n\n3. Created Comprehensive Tests:\n   - jito-config.validation.spec.ts: 20+ unit tests for DTO validation\n   - settings-controller.integration.spec.ts: Integration tests for API endpoints\n   - Tests cover: valid configs, invalid inputs, edge cases, partial updates\n\n4. Created Documentation (backend/api/JITO_CONFIGURATION.md):\n   - Complete configuration reference\n   - API endpoint documentation with examples\n   - Validation rules and error handling\n   - Security considerations\n   - Troubleshooting guide\n   - Integration with workers\n\nConfiguration is fully functional:\n- User settings stored in database (user_settings.jito_config)\n- API endpoints with validation (/api/v1/settings)\n- Environment variable fallbacks (JITO_KEY, BLOCKENGINE_URL, JITO_FEE)\n- Priority: User settings > Campaign params > Environment > Defaults\n- Workers (TradeBuyWorker, TradeSellWorker) read and apply configuration\n\nFiles Created:\n- backend/api/src/v1/settings/dto/jito-config.dto.ts\n- backend/api/src/v1/settings/dto/update-settings.dto.ts\n- backend/api/src/v1/settings/dto/index.ts\n- backend/api/src/v1/settings/__tests__/jito-config.validation.spec.ts\n- backend/api/src/v1/settings/__tests__/settings-controller.integration.spec.ts\n- backend/api/JITO_CONFIGURATION.md\n\nFiles Modified:\n- backend/api/src/v1/settings/settings.controller.ts\n\nReady for task 3.4: Upgrade transaction signing to @solana/web3.js v1.88+\n</info added on 2025-10-08T07:11:36.049Z>",
+            "status": "done",
             "testStrategy": "Unit tests to verify configuration parsing and correct parameter injection into the Jito executor."
           },
           {
@@ -77,7 +77,7 @@
               "3.1"
             ],
             "details": "Update all transaction assembly and signing code to comply with the new API, ensuring compatibility and leveraging improvements in transaction handling.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Unit and integration tests for transaction signing, including edge cases and error handling with the updated library."
           },
           {
@@ -696,7 +696,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-08T06:49:10.638Z",
+      "updated": "2025-10-08T07:34:03.190Z",
       "description": "Tasks for master context"
     }
   }

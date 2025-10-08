@@ -21,9 +21,17 @@ describe('LegacyExecutor', () => {
 
     executor = new LegacyExecutor(config);
 
-    // Mock transaction
-    mockTransaction = {} as VersionedTransaction;
-    mockTransaction.serialize = vi.fn().mockReturnValue(Buffer.from('mock-tx'));
+    // Mock transaction with proper structure for signing verification
+    mockTransaction = {
+      serialize: vi.fn().mockReturnValue(Buffer.from('mock-tx')),
+      sign: vi.fn(),
+      message: {
+        header: {
+          numRequiredSignatures: 1,
+        },
+      },
+      signatures: [new Uint8Array(64).fill(1)], // Mock valid signature
+    } as unknown as VersionedTransaction;
   });
 
   describe('Constructor', () => {
@@ -170,6 +178,106 @@ describe('LegacyExecutor', () => {
     it('should return connection instance', () => {
       const connection = executor.getConnection();
       expect(connection).toBeInstanceOf(Connection);
+    });
+  });
+
+  describe('Transaction Signing (v1.88+ Compliance)', () => {
+    it('should sign transaction before sending', async () => {
+      const connection = executor.getConnection();
+      vi.spyOn(connection, 'getLatestBlockhash').mockResolvedValue({
+        blockhash: 'mock-blockhash',
+        lastValidBlockHeight: 12345,
+      });
+
+      vi.spyOn(connection, 'sendRawTransaction').mockResolvedValue('mock-signature');
+      vi.spyOn(connection, 'confirmTransaction').mockResolvedValue({
+        context: { slot: 123 },
+        value: { err: null },
+      } as any);
+
+      await executor.execute(mockTransaction, testKeypair);
+
+      // Verify sign was called with the keypair
+      expect(mockTransaction.sign).toHaveBeenCalledWith([testKeypair]);
+    });
+
+    it('should verify transaction signatures before sending', async () => {
+      const connection = executor.getConnection();
+      vi.spyOn(connection, 'getLatestBlockhash').mockResolvedValue({
+        blockhash: 'mock-blockhash',
+        lastValidBlockHeight: 12345,
+      });
+
+      // Create transaction with invalid signatures
+      const invalidTx = {
+        serialize: vi.fn().mockReturnValue(Buffer.from('mock-tx')),
+        sign: vi.fn(),
+        message: {
+          header: {
+            numRequiredSignatures: 1,
+          },
+        },
+        signatures: [], // No signatures
+      } as unknown as VersionedTransaction;
+
+      const result = await executor.execute(invalidTx, testKeypair);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Transaction signing failed');
+    });
+
+    it('should handle signing errors gracefully', async () => {
+      const connection = executor.getConnection();
+      vi.spyOn(connection, 'getLatestBlockhash').mockResolvedValue({
+        blockhash: 'mock-blockhash',
+        lastValidBlockHeight: 12345,
+      });
+
+      // Create transaction that throws when signing
+      const errorTx = {
+        serialize: vi.fn().mockReturnValue(Buffer.from('mock-tx')),
+        sign: vi.fn().mockImplementation(() => {
+          throw new Error('Signing failed');
+        }),
+        message: {
+          header: {
+            numRequiredSignatures: 1,
+          },
+        },
+        signatures: [],
+      } as unknown as VersionedTransaction;
+
+      const result = await executor.execute(errorTx, testKeypair);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('should sign all transactions in batch', async () => {
+      const connection = executor.getConnection();
+      vi.spyOn(connection, 'getLatestBlockhash').mockResolvedValue({
+        blockhash: 'mock-blockhash',
+        lastValidBlockHeight: 12345,
+      });
+
+      vi.spyOn(connection, 'sendRawTransaction').mockResolvedValue('mock-signature');
+      vi.spyOn(connection, 'confirmTransaction').mockResolvedValue({
+        context: { slot: 123 },
+        value: { err: null },
+      } as any);
+
+      const tx1 = { ...mockTransaction, sign: vi.fn() };
+      const tx2 = { ...mockTransaction, sign: vi.fn() };
+      const tx3 = { ...mockTransaction, sign: vi.fn() };
+
+      const transactions = [tx1, tx2, tx3] as unknown as VersionedTransaction[];
+
+      await executor.executeBatch(transactions, testKeypair);
+
+      // Verify each transaction was signed
+      expect(tx1.sign).toHaveBeenCalledWith([testKeypair]);
+      expect(tx2.sign).toHaveBeenCalledWith([testKeypair]);
+      expect(tx3.sign).toHaveBeenCalledWith([testKeypair]);
     });
   });
 });

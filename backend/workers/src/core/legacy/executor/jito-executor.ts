@@ -137,6 +137,17 @@ export class JitoExecutor implements TransactionExecutor {
       const bundle = new Bundle([], bundleLimit);
       const latestBlockhash = await this.connection.getLatestBlockhash('processed');
 
+      // Sign all transactions before adding to bundle
+      // In v1.88+, VersionedTransaction.sign() properly handles signing
+      for (const transaction of transactions) {
+        transaction.sign([signerKeypair]);
+
+        // Verify each transaction is properly signed
+        if (!this.isTransactionSigned(transaction)) {
+          throw new Error('Transaction signing failed - missing required signatures');
+        }
+      }
+
       // Add transactions to bundle
       bundle.addTransactions(...transactions);
 
@@ -166,6 +177,21 @@ export class JitoExecutor implements TransactionExecutor {
       console.error('[JITO EXECUTOR] Bundle execution error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Verify that a transaction has all required signatures
+   * @param transaction - The transaction to verify
+   * @returns boolean indicating if transaction is properly signed
+   */
+  private isTransactionSigned(transaction: VersionedTransaction): boolean {
+    // Get the number of required signatures from the message
+    const numRequiredSignatures = transaction.message.header.numRequiredSignatures;
+
+    // Check if we have at least the required number of signatures
+    // Note: signatures array should match the number of required signatures
+    return transaction.signatures.length >= numRequiredSignatures &&
+           transaction.signatures.slice(0, numRequiredSignatures).every(sig => sig !== null && sig.length === 64);
   }
 
   /**

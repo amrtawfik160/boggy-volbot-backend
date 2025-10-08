@@ -38,8 +38,18 @@ export class LegacyExecutor implements TransactionExecutor {
     try {
       console.log(`[LEGACY EXECUTOR] Sending ${isBuy ? 'buy' : 'sell'} transaction...`);
 
-      // Get latest blockhash
+      // Get latest blockhash for confirmation
       const latestBlockhash = await this.connection.getLatestBlockhash('processed');
+
+      // Sign transaction with the provided keypair
+      // Note: VersionedTransaction.sign() behaves like partialSign - it adds signatures without removing existing ones
+      // However, to ensure fresh signatures and avoid stale blockhash issues, we sign here
+      transaction.sign([signerKeypair]);
+
+      // Verify transaction is properly signed
+      if (!this.isTransactionSigned(transaction)) {
+        throw new Error('Transaction signing failed - missing required signatures');
+      }
 
       // Send transaction
       const signature = await this.connection.sendRawTransaction(
@@ -88,6 +98,21 @@ export class LegacyExecutor implements TransactionExecutor {
         error: errorMessage,
       };
     }
+  }
+
+  /**
+   * Verify that a transaction has all required signatures
+   * @param transaction - The transaction to verify
+   * @returns boolean indicating if transaction is properly signed
+   */
+  private isTransactionSigned(transaction: VersionedTransaction): boolean {
+    // Get the number of required signatures from the message
+    const numRequiredSignatures = transaction.message.header.numRequiredSignatures;
+
+    // Check if we have at least the required number of signatures
+    // Note: signatures array should match the number of required signatures
+    return transaction.signatures.length >= numRequiredSignatures &&
+           transaction.signatures.slice(0, numRequiredSignatures).every(sig => sig !== null && sig.length === 64);
   }
 
   /**
