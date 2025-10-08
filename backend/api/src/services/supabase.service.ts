@@ -177,6 +177,16 @@ export class SupabaseService {
         if (error) throw error
     }
 
+    async getAllUserEncryptionKeys() {
+        const { data, error } = await this.supabase
+            .from('user_encryption_keys')
+            .select('*')
+            .order('user_id', { ascending: true })
+
+        if (error) throw error
+        return data || []
+    }
+
     // Campaigns
     async getCampaignsByUserId(userId: string) {
         const { data, error } = await this.supabase

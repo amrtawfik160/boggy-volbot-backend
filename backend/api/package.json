@@ -14,7 +14,10 @@
         "format": "prettier --write \"**/*.{ts,json,md}\"",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage"
+        "test:coverage": "vitest run --coverage",
+        "generate-master-key": "ts-node scripts/generate-master-key.ts",
+        "rotate-master-key": "ts-node scripts/rotate-master-key.ts",
+        "verify-deks": "ts-node scripts/verify-deks.ts"
     },
     "dependencies": {
         "@nestjs/common": "^10.4.15",

@@ -178,69 +178,197 @@ const dek = crypto.randomBytes(32); // 256 bits for AES-256
 
 ## Key Rotation
 
-### Rotating DEKs (Per-User)
+> **📖 For detailed operational procedures, see [KEY_ROTATION_RUNBOOK.md](./KEY_ROTATION_RUNBOOK.md)**
 
-1. **Generate New DEK**:
-   ```typescript
-   const newDEK = crypto.randomBytes(32);
-   ```
+### Overview
 
-2. **Encrypt New DEK with KEK**:
-   ```typescript
-   const encryptedNewDEK = encryptWithKEK(newDEK);
-   ```
+The application supports two types of key rotation:
 
-3. **Re-encrypt All User Wallets**:
-   ```typescript
-   for (const wallet of userWallets) {
-     const privateKey = decryptPrivateKey(wallet.encrypted_private_key, oldDEK);
-     const newEncryptedKey = encryptPrivateKey(privateKey, newDEK);
-     await updateWallet(wallet.id, newEncryptedKey);
-   }
-   ```
+1. **Per-User DEK Rotation** (Low Risk)
+   - Affects single user only
+   - No downtime required
+   - Automatic rollback on failure
+   - Can be performed anytime
 
-4. **Update User DEK Record**:
-   ```typescript
-   await db.createUserDEK(userId, encryptedNewDEK, newVersion);
-   await db.archiveOldDEK(userId, oldVersion);
-   ```
+2. **Master Key Rotation** (High Risk)
+   - Affects all users
+   - Requires service restart
+   - Database backup required
+   - Should be planned carefully
 
-### Rotating Master Key (Global)
+### Quick Reference: Rotating DEKs (Per-User)
 
-**⚠️ WARNING**: This requires re-encrypting ALL user DEKs. Plan carefully.
+Use the `KeyManagementService` to rotate a user's DEK:
 
-1. **Generate New Master Key**:
-   ```bash
-   NEW_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
-   ```
+```typescript
+// Rotate a single user's DEK
+await keyManagementService.rotateUserDEK(userId);
+```
 
-2. **Derive New KEK**:
-   ```typescript
-   const newKEK = deriveKEK(newMasterKey);
-   ```
+This operation:
+1. Generates a new 32-byte DEK
+2. Encrypts it with the current KEK
+3. Re-encrypts all user wallets with the new DEK
+4. Updates the DEK version in the database
+5. Automatically rolls back on any failure
 
-3. **Re-encrypt All DEKs**:
-   ```typescript
-   // For each user
-   const dek = decryptDEKWithKEK(encryptedDEK, oldKEK);
-   const newEncryptedDEK = encryptDEKWithKEK(dek, newKEK);
-   await db.updateUserDEK(userId, newEncryptedDEK);
-   ```
+**Testing After Rotation**:
+```typescript
+// Verify user can still decrypt wallets
+const privateKey = await keyManagementService.decryptPrivateKeyForUser(
+  userId,
+  encryptedPrivateKey
+);
+```
 
-4. **Update Environment**:
-   ```bash
-   export MASTER_ENCRYPTION_KEY="$NEW_KEY"
-   ```
+### Quick Reference: Rotating Master Key (Global)
 
-5. **Rolling Restart**:
-   - Restart services to pick up new master key
-   - Verify all services can decrypt DEKs
+**⚠️ WARNING**: This requires re-encrypting ALL user DEKs. Always create a database backup first!
+
+**Prerequisites**:
+- [ ] Database backup created and verified
+- [ ] Backup restorable
+- [ ] Team members available
+- [ ] Monitoring systems active
+
+**Commands**:
+
+```bash
+# Step 1: Generate new master key
+npm run generate-master-key
+
+# Step 2: Perform rotation (with old key in environment)
+npm run rotate-master-key "new-key-base64" --batch-size=20
+
+# Step 3: Update environment variable to new key
+export MASTER_ENCRYPTION_KEY="new-key-base64"
+
+# Step 4: Restart services
+kubectl rollout restart deployment/api-server
+
+# Step 5: Verify all DEKs
+npm run verify-deks
+```
+
+**Using the Service Programmatically**:
+
+```typescript
+import { KeyRotationService } from './services/key-rotation.service';
+
+// Rotate master key
+const progress = await keyRotationService.rotateMasterKey(
+  newMasterKeyBase64,
+  batchSize // Number of users per batch (default: 10)
+);
+
+console.log(`Rotated ${progress.completed}/${progress.total} users`);
+console.log(`Failed: ${progress.failed}`);
+
+// Verify all DEKs after rotation
+const results = await keyRotationService.verifyAllDEKs();
+console.log(`Valid: ${results.successful}/${results.total}`);
+
+// Rollback a user if needed
+await keyRotationService.rollbackUserDEK(
+  userId,
+  previousEncryptedDEK,
+  previousVersion
+);
+```
+
+### Available Scripts
+
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| `npm run generate-master-key` | Generate new 32-byte master key | Before rotation or initial setup |
+| `npm run rotate-master-key <key>` | Rotate master key and re-encrypt all DEKs | Annual rotation or compromise |
+| `npm run verify-deks` | Verify all DEKs can be decrypted | After rotation or troubleshooting |
+
+**Script Options**:
+```bash
+# Dry run (validate without changes)
+npm run rotate-master-key "new-key" --dry-run
+
+# Custom batch size (default: 10)
+npm run rotate-master-key "new-key" --batch-size=50
+
+# Get help
+npm run rotate-master-key --help
+```
+
+### Rotation Features
+
+#### Progress Tracking
+The rotation service provides real-time progress updates:
+```typescript
+{
+  total: 1000,           // Total users
+  completed: 950,        // Successfully rotated
+  failed: 50,            // Failed rotations
+  userIds: [...],        // Successfully rotated user IDs
+  failedUserIds: [...],  // Failed user IDs
+  startTime: Date,       // Rotation start time
+  lastUpdated: Date      // Last progress update
+}
+```
+
+#### Batch Processing
+- Processes users in configurable batches (default: 10)
+- Prevents memory exhaustion with large user bases
+- Allows progress monitoring during rotation
+
+#### Error Handling
+- Continues rotation even if individual users fail
+- Records all failures for investigation
+- Prevents concurrent rotations
+- Maintains rotation state
+
+#### Rollback Support
+- Automatic rollback on DEK rotation failures
+- Manual rollback available for master key rotation
+- Preserves previous DEK versions for recovery
 
 ### Rotation Schedule Recommendations
 
-- **DEK Rotation**: On-demand or annually per user
-- **Master Key Rotation**: Annually or after suspected compromise
-- **KEK Rotation**: Coupled with master key rotation
+| Key Type | Frequency | Trigger Events |
+|----------|-----------|----------------|
+| User DEK | Annually or on-demand | User request, suspected compromise, account recovery |
+| Master Key | Annually | Scheduled maintenance, known compromise, compliance |
+| KEK | Coupled with master key | Master key rotation |
+
+### Security During Rotation
+
+**Before Rotation**:
+1. Create and verify database backup
+2. Ensure master key is stored securely
+3. Verify monitoring and alerting systems
+4. Plan rollback procedures
+
+**During Rotation**:
+1. Monitor error rates and system health
+2. Watch for decryption failures
+3. Track rotation progress
+4. Be ready to rollback if needed
+
+**After Rotation**:
+1. Verify all DEKs with `npm run verify-deks`
+2. Test critical user workflows
+3. Monitor application logs for 24 hours
+4. Archive old master key securely (do not delete)
+5. Update documentation with rotation date
+
+### Troubleshooting Rotation
+
+See [KEY_ROTATION_RUNBOOK.md](./KEY_ROTATION_RUNBOOK.md) for detailed troubleshooting procedures.
+
+**Common Issues**:
+
+| Issue | Solution |
+|-------|----------|
+| Rotation hangs | Check database connectivity, reduce batch size |
+| High failure rate | Verify old KEK is correct, check connection pool |
+| Services won't start | Verify new master key format and environment variable |
+| Individual user fails | Rotate user's DEK specifically, verify wallet integrity |
 
 ## Security Best Practices
 

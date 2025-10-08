@@ -336,8 +336,8 @@
               "9.1",
               "9.3"
             ],
-            "details": "Provide clear documentation and scripts for key rotation. Ensure minimal downtime and data integrity during rotation. Address how to handle active sessions and rollback in case of failure.",
-            "status": "pending",
+            "details": "Provide clear documentation and scripts for key rotation. Ensure minimal downtime and data integrity during rotation. Address how to handle active sessions and rollback in case of failure.\n<info added on 2025-10-08T06:38:36.992Z>\nCompleted implementation of key rotation procedures, including the KeyRotationService with master key batch rotation, progress tracking, rollback, DEK verification, and concurrency controls. Operational scripts for key generation, rotation, and DEK verification are provided and integrated into package.json. A comprehensive test suite covers all rotation scenarios and edge cases. Operational runbook and key management documentation have been updated with step-by-step procedures, checklists, rollback guidance, monitoring, troubleshooting, and security best practices. All components are tested, integrated, and ready for production deployment.\n</info added on 2025-10-08T06:38:36.992Z>",
+            "status": "done",
             "testStrategy": "Manual and automated tests for key rotation, including rollback and verification of re-encrypted data."
           }
         ]
@@ -640,7 +640,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-07T21:12:33.904Z",
+      "updated": "2025-10-08T06:38:42.093Z",
       "description": "Tasks for master context"
     }
   }
