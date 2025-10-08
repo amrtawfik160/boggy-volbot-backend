@@ -1,13 +1,8 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common'
+import { Controller, Get, Patch, Body, UseGuards, UsePipes, ValidationPipe, BadRequestException } from '@nestjs/common'
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard'
 import { CurrentUser } from '../../decorators/user.decorator'
 import { SupabaseService } from '../../services/supabase.service'
-
-interface UpdateSettingsDto {
-    trading_config?: any
-    sell_config?: any
-    jito_config?: any
-}
+import { UpdateSettingsDto } from './dto'
 
 @Controller('settings')
 @UseGuards(SupabaseAuthGuard)
@@ -21,7 +16,18 @@ export class SettingsController {
     }
 
     @Patch()
+    @UsePipes(new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+        validateCustomDecorators: true
+    }))
     async updateSettings(@Body() dto: UpdateSettingsDto, @CurrentUser() user: any) {
+        // Additional validation: if jito is enabled, ensure jitoKey is provided
+        if (dto.jito_config?.useJito === true && !dto.jito_config?.jitoKey) {
+            throw new BadRequestException('jitoKey is required when useJito is true')
+        }
+
         const updated = await this.supabase.upsertUserSettings(user.id, dto)
         return updated
     }
