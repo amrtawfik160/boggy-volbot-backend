@@ -37,7 +37,63 @@
           2
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Refactor Legacy and Jito Executors for Unified Interfaces",
+            "description": "Refactor legacy.ts and jito.ts modules to expose a consistent, unified interface for transaction execution, ensuring both executors can be used interchangeably by worker job handlers.",
+            "dependencies": [],
+            "details": "Standardize method signatures and exported functions in both executor modules to support seamless integration and future extensibility.\n<info added on 2025-10-08T06:43:55.900Z>\nCompleted refactoring of legacy and Jito executors to expose unified interfaces:\n\nCreated unified interface system:\n- types.ts: Defined TransactionExecutor interface with execute() and executeBatch() methods, ExecutorConfig and JitoExecutorConfig types, ExecutionOptions, ExecutorType enum, and TransactionExecutionResult type\n- All executors implement consistent interface for interchangeable use\n\nRefactored Legacy Executor:\n- legacy-executor.ts: LegacyExecutor class implementing TransactionExecutor\n- Executes single transactions via RPC with confirmation\n- executeBatch() executes transactions sequentially\n- Maintains backward compatibility with legacy execute() function\n\nRefactored Jito Executor:\n- jito-executor.ts: JitoExecutor class implementing TransactionExecutor  \n- Executes transactions as Jito bundles with MEV protection\n- executeBatch() chunks transactions into bundles\n- Configurable tip amount, bundle limits, and timeouts\n- Maintains backward compatibility with legacy bundle() and bull_dozer() functions\n\nFactory pattern:\n- factory.ts: ExecutorFactory with create() and fromEnvironment() methods\n- Dynamically creates executors based on ExecutorType\n- Helper function getExecutorTypeFromCampaign() for campaign config integration\n\nTesting:\n- legacy-executor.spec.ts: Tests for LegacyExecutor interface compliance, execute/executeBatch methods, error handling\n- factory.spec.ts: Tests for factory creation, environment-based creation, type guards, campaign integration\n\nBackward compatibility:\n- legacy.ts and jito.ts updated as wrapper modules exporting new classes and legacy functions\n- Existing code using execute() and bundle() continues to work\n- All imports remain functional\n\nReady for subtask 3.2: Implement executor selection logic.\n</info added on 2025-10-08T06:43:55.900Z>",
+            "status": "done",
+            "testStrategy": "Unit tests for each executor to verify interface compliance and correct transaction execution behavior."
+          },
+          {
+            "id": 2,
+            "title": "Implement Executor Selection Logic Based on Campaign Configuration",
+            "description": "Develop logic to dynamically select either the legacy or Jito executor at runtime, based on campaign-specific configuration parameters.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Inject executor selection into worker job handlers, ensuring the correct executor is chosen for each campaign according to its configuration.",
+            "status": "pending",
+            "testStrategy": "Integration tests simulating various campaign configurations to confirm correct executor selection and invocation."
+          },
+          {
+            "id": 3,
+            "title": "Make Jito Tip and Auth Keypair Configurable",
+            "description": "Add configuration options for setting the Jito tip amount and authentication keypair, allowing these parameters to be customized per deployment or campaign.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Expose environment variables or configuration fields for Jito tip and auth keypair, and ensure these are properly injected into the Jito executor.",
+            "status": "pending",
+            "testStrategy": "Unit tests to verify configuration parsing and correct parameter injection into the Jito executor."
+          },
+          {
+            "id": 4,
+            "title": "Upgrade Transaction Signing to Use @solana/web3.js v1.88+",
+            "description": "Refactor transaction signing logic in both executors to utilize the latest features and best practices from @solana/web3.js v1.88 or higher.",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Update all transaction assembly and signing code to comply with the new API, ensuring compatibility and leveraging improvements in transaction handling.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests for transaction signing, including edge cases and error handling with the updated library."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Executors with Worker Job Handlers and Validate End-to-End Flow",
+            "description": "Wire up the unified executors to the worker job handlers, ensuring buy/sell jobs use the correct executor and transaction parameters throughout the job lifecycle.",
+            "dependencies": [
+              "3.2",
+              "3.3",
+              "3.4"
+            ],
+            "details": "Implement and validate the full integration, including error propagation, logging, and correct parameter usage for both legacy and Jito flows.",
+            "status": "pending",
+            "testStrategy": "Comprehensive unit and integration tests for buy/sell jobs, verifying correct executor usage, transaction parameters, and successful job completion."
+          }
+        ]
       },
       {
         "id": 4,
@@ -284,7 +340,7 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -640,7 +696,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-08T06:38:42.093Z",
+      "updated": "2025-10-08T06:44:05.947Z",
       "description": "Tasks for master context"
     }
   }
