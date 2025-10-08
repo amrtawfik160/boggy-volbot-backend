@@ -8,10 +8,10 @@ import {
   getSellTx,
   getSellTxWithJupiter,
 } from '../utils/swapOnlyAmm';
-import { execute } from '../executor/legacy';
-import { bundle } from '../executor/jito';
 import { SWAP_ROUTING } from '../constants';
 import { NATIVE_MINT } from '@solana/spl-token';
+import { ExecutorFactory } from '../executor/factory';
+import { TransactionExecutor } from '../executor/types';
 
 export interface TradeResult {
   success: boolean;
@@ -27,12 +27,27 @@ export interface TradeStats {
   totalVolume: number;
 }
 
+export interface TradingServiceConfig {
+  connection: Connection;
+  rpcEndpoint: string;
+  rpcWebsocketEndpoint: string;
+  jitoConfig?: {
+    blockEngineUrl: string;
+    authKeypair: Keypair;
+    tipAmount: number;
+    bundleTransactionLimit?: number;
+    bundleTimeoutMs?: number;
+  };
+}
+
 export class TradingService {
   private connection: Connection;
   private stats: TradeStats;
+  private config: TradingServiceConfig;
 
-  constructor(connection: Connection) {
-    this.connection = connection;
+  constructor(config: TradingServiceConfig) {
+    this.config = config;
+    this.connection = config.connection;
     this.stats = {
       totalBuys: 0,
       totalSells: 0,
@@ -244,20 +259,19 @@ export class TradingService {
   ): Promise<string> {
     // Apply rate limiting before transaction execution
     await globalRateLimiter.waitForSlot();
-    
-    if (useJito) {
-      tradeLogger.debug('Executing buy transaction with Jito bundling');
-      const bundleResult = await bundle([transaction], wallet);
-      if (bundleResult) {
-        return 'bundled'; // Jito doesn't return specific signature
-      } else {
-        throw new TransactionError('Jito bundle execution failed');
-      }
-    } else {
-      tradeLogger.debug('Executing buy transaction with legacy method');
-      const latestBlockhash = await this.connection.getLatestBlockhash();
-      return await execute(transaction, latestBlockhash, true); // isBuy = true
+
+    // Create executor based on useJito flag
+    const executor = this.createExecutor(useJito);
+
+    tradeLogger.debug(`Executing buy transaction with ${useJito ? 'Jito' : 'legacy'} executor`);
+
+    const result = await executor.execute(transaction, wallet, { isBuy: true });
+
+    if (!result.success) {
+      throw new TransactionError(result.error || 'Transaction execution failed');
     }
+
+    return result.signature || 'bundled';
   }
 
   private async executeSellTransaction(
@@ -267,20 +281,32 @@ export class TradingService {
   ): Promise<string> {
     // Apply rate limiting before transaction execution
     await globalRateLimiter.waitForSlot();
-    
-    if (useJito) {
-      tradeLogger.debug('Executing sell transaction with Jito bundling');
-      const bundleResult = await bundle([transaction], wallet);
-      if (bundleResult) {
-        return 'bundled'; // Jito doesn't return specific signature
-      } else {
-        throw new TransactionError('Jito bundle execution failed');
-      }
-    } else {
-      tradeLogger.debug('Executing sell transaction with legacy method');
-      const latestBlockhash = await this.connection.getLatestBlockhash();
-      return await execute(transaction, latestBlockhash, false); // isBuy = false
+
+    // Create executor based on useJito flag
+    const executor = this.createExecutor(useJito);
+
+    tradeLogger.debug(`Executing sell transaction with ${useJito ? 'Jito' : 'legacy'} executor`);
+
+    const result = await executor.execute(transaction, wallet, { isBuy: false });
+
+    if (!result.success) {
+      throw new TransactionError(result.error || 'Transaction execution failed');
     }
+
+    return result.signature || 'bundled';
+  }
+
+  /**
+   * Create the appropriate executor based on campaign configuration
+   */
+  private createExecutor(useJito: boolean): TransactionExecutor {
+    return ExecutorFactory.fromEnvironment(
+      useJito,
+      this.config.rpcEndpoint,
+      this.config.rpcWebsocketEndpoint,
+      this.connection,
+      this.config.jitoConfig
+    );
   }
 
   private async getTokenBalance(wallet: Keypair, baseMint: PublicKey, maxRetries: number = 10): Promise<string | null> {

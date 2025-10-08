@@ -1,8 +1,9 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { BaseWorker, BaseWorkerConfig, JobContext } from './BaseWorker';
 import { TradeJobPayload } from '../types';
-import { TradingService } from '../core/legacy/services/trading-service';
+import { TradingService, TradingServiceConfig } from '../core/legacy/services/trading-service';
 import { getKeypairFromEncrypted } from './utils/crypto';
+import * as bs58 from 'bs58';
 
 export interface TradeBuyJobData extends TradeJobPayload {
   runId?: string;
@@ -88,8 +89,35 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
 
     await context.updateProgress(50, 'Executing buy transaction');
 
-    // Execute buy using TradingService
-    const tradingService = new TradingService(this.connection);
+    // Prepare Jito configuration if needed
+    let jitoConfig: TradingServiceConfig['jitoConfig'];
+    if (useJito) {
+      const jitoKey = settings?.jito_config?.jitoKey || process.env.JITO_KEY;
+      const blockEngineUrl = settings?.jito_config?.blockEngineUrl || process.env.BLOCKENGINE_URL || 'https://mainnet.block-engine.jito.wtf';
+      const jitoTipAmount = settings?.jito_config?.jitoFee || Number(process.env.JITO_FEE || 0.0001);
+
+      if (!jitoKey) {
+        throw new Error('Jito key is required when useJito is enabled');
+      }
+
+      jitoConfig = {
+        blockEngineUrl,
+        authKeypair: Keypair.fromSecretKey(bs58.decode(jitoKey)),
+        tipAmount: jitoTipAmount,
+        bundleTransactionLimit: 4,
+        bundleTimeoutMs: 30000,
+      };
+    }
+
+    // Create TradingService with executor configuration
+    const tradingServiceConfig: TradingServiceConfig = {
+      connection: this.connection,
+      rpcEndpoint: process.env.RPC_ENDPOINT || '',
+      rpcWebsocketEndpoint: process.env.RPC_WEBSOCKET_ENDPOINT || '',
+      jitoConfig,
+    };
+
+    const tradingService = new TradingService(tradingServiceConfig);
     const poolId = new PublicKey(campaign.pools.pool_address);
     const baseMint = new PublicKey(campaign.tokens.mint);
 

@@ -1,10 +1,11 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { Queue } from 'bullmq';
 import { BaseWorker, BaseWorkerConfig, JobContext } from './BaseWorker';
 import { TradeJobPayload, QueueNames } from '../types';
-import { TradingService } from '../core/legacy/services/trading-service';
+import { TradingService, TradingServiceConfig } from '../core/legacy/services/trading-service';
 import { getKeypairFromEncrypted } from './utils/crypto';
+import * as bs58 from 'bs58';
 
 export interface TradeSellJobData extends TradeJobPayload {
   runId?: string;
@@ -85,12 +86,6 @@ export class TradeSellWorker extends BaseWorker<TradeSellJobData, TradeSellJobRe
 
     await context.updateProgress(40, 'Loading user settings');
 
-    // Execute sell using TradingService
-    const tradingService = new TradingService(this.connection);
-    const poolId = new PublicKey(campaign.pools.pool_address);
-    const baseMint = new PublicKey(campaign.tokens.mint);
-    const useJito = (campaign.params && campaign.params.useJito) || false;
-
     // Load per-user settings
     const { data: settings } = await context.supabase
       .from('user_settings')
@@ -99,6 +94,44 @@ export class TradeSellWorker extends BaseWorker<TradeSellJobData, TradeSellJobRe
       .single();
 
     const sellCfg = (settings && settings.sell_config) || {};
+
+    // Determine if Jito should be used
+    let useJito = (campaign.params && campaign.params.useJito) || false;
+    if (settings && settings.jito_config && typeof settings.jito_config.useJito === 'boolean') {
+      useJito = settings.jito_config.useJito;
+    }
+
+    // Prepare Jito configuration if needed
+    let jitoConfig: TradingServiceConfig['jitoConfig'];
+    if (useJito) {
+      const jitoKey = settings?.jito_config?.jitoKey || process.env.JITO_KEY;
+      const blockEngineUrl = settings?.jito_config?.blockEngineUrl || process.env.BLOCKENGINE_URL || 'https://mainnet.block-engine.jito.wtf';
+      const jitoTipAmount = settings?.jito_config?.jitoFee || Number(process.env.JITO_FEE || 0.0001);
+
+      if (!jitoKey) {
+        throw new Error('Jito key is required when useJito is enabled');
+      }
+
+      jitoConfig = {
+        blockEngineUrl,
+        authKeypair: Keypair.fromSecretKey(bs58.decode(jitoKey)),
+        tipAmount: jitoTipAmount,
+        bundleTransactionLimit: 4,
+        bundleTimeoutMs: 30000,
+      };
+    }
+
+    // Create TradingService with executor configuration
+    const tradingServiceConfig: TradingServiceConfig = {
+      connection: this.connection,
+      rpcEndpoint: process.env.RPC_ENDPOINT || '',
+      rpcWebsocketEndpoint: process.env.RPC_WEBSOCKET_ENDPOINT || '',
+      jitoConfig,
+    };
+
+    const tradingService = new TradingService(tradingServiceConfig);
+    const poolId = new PublicKey(campaign.pools.pool_address);
+    const baseMint = new PublicKey(campaign.tokens.mint);
 
     // Handle sell-only progressive mode
     if (mode === 'sell-only') {
@@ -132,7 +165,7 @@ export class TradeSellWorker extends BaseWorker<TradeSellJobData, TradeSellJobRe
     context: JobContext,
     data: TradeSellJobData,
     tradingService: TradingService,
-    keypair: any,
+    keypair: Keypair,
     baseMint: PublicKey,
     poolId: PublicKey,
     useJito: boolean,
@@ -250,7 +283,7 @@ export class TradeSellWorker extends BaseWorker<TradeSellJobData, TradeSellJobRe
     context: JobContext,
     data: TradeSellJobData,
     tradingService: TradingService,
-    keypair: any,
+    keypair: Keypair,
     baseMint: PublicKey,
     poolId: PublicKey,
     useJito: boolean,
