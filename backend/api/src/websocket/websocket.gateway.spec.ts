@@ -2,20 +2,26 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CampaignWebSocketGateway } from './websocket.gateway';
 import { SupabaseService } from '../services/supabase.service';
 import { Server, Socket } from 'socket.io';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
 import * as supabaseConfig from '../config/supabase';
 
 describe('CampaignWebSocketGateway', () => {
   let gateway: CampaignWebSocketGateway;
   let supabaseService: SupabaseService;
+  let module: TestingModule;
 
   const mockSupabaseService = {
     getCampaignById: vi.fn(),
   };
 
-  beforeEach(async () => {
-    // Clear call history
+  beforeEach(() => {
+    // Clear only the specific mock's call history
     mockSupabaseService.getCampaignById.mockClear();
+
+    // Manually instantiate the gateway with the mock
+    // This bypasses NestJS module system issues
+    gateway = new CampaignWebSocketGateway(mockSupabaseService as any);
+    supabaseService = mockSupabaseService as any;
 
     // Mock supabaseAdmin.auth.getUser
     vi.spyOn(supabaseConfig.supabaseAdmin.auth, 'getUser').mockResolvedValue({
@@ -32,19 +38,6 @@ describe('CampaignWebSocketGateway', () => {
       },
       error: null,
     } as any);
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CampaignWebSocketGateway,
-        {
-          provide: SupabaseService,
-          useValue: mockSupabaseService,
-        },
-      ],
-    }).compile();
-
-    gateway = module.get<CampaignWebSocketGateway>(CampaignWebSocketGateway);
-    supabaseService = module.get<SupabaseService>(SupabaseService);
   });
 
   it('should be defined', () => {
