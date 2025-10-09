@@ -4,18 +4,7 @@ import { CurrentUser } from '../../decorators/user.decorator';
 import { SupabaseService } from '../../services/supabase.service';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getTokenMetadata } from '../../services/token-metadata.service';
-
-interface CreateTokenDto {
-  mint: string;
-  symbol: string;
-  decimals: number;
-  metadata?: any;
-}
-
-interface UpdateTokenDto {
-  symbol?: string;
-  metadata?: any;
-}
+import { CreateTokenDto, UpdateTokenDto, CreatePoolDto } from './dto';
 
 @Controller('tokens')
 export class TokensController {
@@ -63,7 +52,7 @@ export class TokensController {
   @UseGuards(SupabaseAuthGuard)
   async createPool(
     @Param('id') tokenId: string,
-    @Body() dto: { pool_address: string; dex: string; metadata?: any },
+    @Body() dto: CreatePoolDto,
     @CurrentUser() user: any
   ) {
     return await this.supabase.createPool({

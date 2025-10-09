@@ -419,6 +419,7 @@ MIT
 -   [Frontend README](./frontend/README.md)
 -   [Database Schema](./backend/database-schema.sql)
 -   [Product Requirements](./PRD.md)
+-   [**Input Validation & Security Strategy**](./docs/VALIDATION_STRATEGY.md) 🔒
 
 ## Support
 

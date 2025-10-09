@@ -518,8 +518,54 @@
           2,
           6
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement DTO Validation with class-validator v0.14+",
+            "description": "Define and enforce validation rules for all API request DTOs using class-validator v0.14+ to ensure data types, required fields, and value ranges are strictly validated before processing.",
+            "dependencies": [],
+            "details": "Update all DTO classes to include decorators from class-validator v0.14+ for field validation. Ensure validation covers all endpoints, with clear error messages for failed validations. Keep validation logic separate from business logic for maintainability.",
+            "status": "done",
+            "testStrategy": "Write unit tests for each DTO validation rule. Verify that invalid requests return appropriate HTTP 422 responses with standardized error details."
+          },
+          {
+            "id": 2,
+            "title": "Add Solana Address Validation (Base58, Length)",
+            "description": "Implement custom validation for Solana addresses to ensure they are valid Base58 strings and meet the expected length requirements.",
+            "dependencies": [],
+            "details": "Create a custom validator (using class-validator) for Solana addresses that checks both the Base58 encoding and the correct length. Apply this validator to all relevant DTO fields. Sanitize inputs to prevent injection attacks.",
+            "status": "done",
+            "testStrategy": "Unit tests for the custom validator, including edge cases (invalid characters, wrong length). Integration tests to confirm API rejects invalid addresses."
+          },
+          {
+            "id": 3,
+            "title": "Validate Campaign Parameters (Slippage, TX Size)",
+            "description": "Enforce validation rules for campaign-related parameters such as slippage and transaction size to prevent invalid or dangerous values from being processed.",
+            "dependencies": [],
+            "details": "Extend DTO validation to include checks for slippage (e.g., within safe bounds) and transaction size (e.g., maximum allowed size). Use class-validator decorators and custom validation logic where necessary. Document validation rules for transparency.",
+            "status": "done",
+            "testStrategy": "Unit tests for parameter validation logic. Integration tests to ensure API endpoints reject out-of-bounds values with clear error messages."
+          },
+          {
+            "id": 4,
+            "title": "Integrate zod v3+ for Frontend Form Validation",
+            "description": "Adopt zod v3+ schema validation for all frontend forms to ensure user input matches backend expectations and reduce invalid submissions.",
+            "dependencies": [],
+            "details": "Define zod schemas for each form, mirroring backend DTO validation rules. Integrate zod with form libraries (e.g., React Hook Form) to validate inputs client-side before submission. Provide user-friendly error messages.",
+            "status": "done",
+            "testStrategy": "Component tests for form validation behavior. E2E tests to verify invalid form submissions are blocked and errors are displayed correctly."
+          },
+          {
+            "id": 5,
+            "title": "Sanitize All Inputs and Document Validation Strategy",
+            "description": "Apply input sanitization to prevent XSS, SQL injection, and other common attacks. Document the overall validation and sanitization approach for team alignment.",
+            "dependencies": [],
+            "details": "Use trusted libraries to sanitize all string inputs (both API and frontend). Avoid manual sanitization to reduce errors. Document the validation and sanitization rules, error handling, and security measures in the project wiki or README.",
+            "status": "done",
+            "testStrategy": "Manual review of documentation for completeness. Security-focused integration tests (e.g., attempting injection attacks) to verify sanitization effectiveness."
+          }
+        ]
       },
       {
         "id": 11,
@@ -805,7 +851,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-09T09:00:59.748Z",
+      "updated": "2025-10-09T09:10:42.177Z",
       "description": "Tasks for master context"
     }
   }

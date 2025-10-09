@@ -1,30 +1,11 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus, ValidationPipe } from '@nestjs/common'
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard'
 import { CurrentUser } from '../../decorators/user.decorator'
 import { SupabaseService } from '../../services/supabase.service'
 import { CampaignWebSocketGateway } from '../../websocket/websocket.gateway'
 import { Queue } from 'bullmq'
 import IORedis from 'ioredis'
-
-interface CreateCampaignDto {
-    name: string
-    token_id: string
-    pool_id: string
-    params: {
-        slippage?: number
-        minTxSize?: number
-        maxTxSize?: number
-        targetVolume?: number
-        schedule?: string
-        useJito?: boolean
-        jitoTip?: number
-    }
-}
-
-interface UpdateCampaignDto {
-    name?: string
-    params?: any
-}
+import { CreateCampaignDto, UpdateCampaignDto, DistributeDto, SellOnlyDto } from './dto'
 
 @Controller('campaigns')
 @UseGuards(SupabaseAuthGuard)
@@ -424,7 +405,7 @@ export class CampaignsController {
     async distribute(
         @Param('id') id: string,
         @CurrentUser() user: any,
-        @Body() body?: { num_wallets?: number }
+        @Body() body: DistributeDto
     ) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
@@ -472,7 +453,7 @@ export class CampaignsController {
     async startSellOnly(
         @Param('id') id: string,
         @CurrentUser() user: any,
-        @Body() body?: { total_times?: number }
+        @Body() body: SellOnlyDto
     ) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {

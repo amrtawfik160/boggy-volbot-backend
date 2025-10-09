@@ -16,17 +16,7 @@ import { SupabaseService } from '../../services/supabase.service';
 import { KeyManagementService } from '../../services/key-management.service';
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
-
-interface CreateWalletDto {
-  address?: string;
-  privateKey?: string;
-  label?: string;
-}
-
-interface UpdateWalletDto {
-  label?: string;
-  is_active?: boolean;
-}
+import { CreateWalletDto, UpdateWalletDto } from './dto';
 
 @Controller('wallets')
 @UseGuards(SupabaseAuthGuard)
