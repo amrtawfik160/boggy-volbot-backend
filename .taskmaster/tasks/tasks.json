@@ -36,7 +36,7 @@
           1,
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -175,8 +175,62 @@
           1,
           4
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up BullMQ Queue and Repeatable Job Scheduling",
+            "description": "Initialize BullMQ queue for campaign status aggregation and configure repeatable jobs to run every 10-30 seconds per active campaign.",
+            "dependencies": [],
+            "details": "Create a BullMQ queue instance connected to Redis. Use the repeat option to schedule jobs at the desired interval (10-30s) for each active campaign. Ensure jobs are uniquely identified per campaign and repeat as required.\n<info added on 2025-10-09T08:47:59.657Z>\nImplementation completed using a custom StatusAggregatorWorker class with self-managed setInterval scheduling instead of BullMQ's repeatable jobs feature. The worker implements configurable periodic checks (default 15s, range 10-30s) to query active campaigns, create database job entries, and dispatch jobs to the StatusWorker queue. Includes lifecycle management via start()/stop() methods, per-campaign scheduling tracking to prevent duplicates, automatic cleanup of stale entries for inactive campaigns, comprehensive error handling, and detailed logging. Worker file location: backend/workers/src/workers/StatusAggregatorWorker.ts\n</info added on 2025-10-09T08:47:59.657Z>",
+            "status": "done",
+            "testStrategy": "Unit test queue creation and repeatable job scheduling. Verify jobs are scheduled at correct intervals."
+          },
+          {
+            "id": 2,
+            "title": "Implement Worker Logic for Aggregating Campaign Metrics",
+            "description": "Develop the worker function that processes each scheduled job, aggregates job metrics for the target campaign, and prepares summary data.",
+            "dependencies": [
+              1
+            ],
+            "details": "Write the worker logic to fetch relevant job metrics from the database or cache, compute the required aggregates (e.g., counts, success/failure rates), and structure the summary for storage and broadcast.",
+            "status": "done",
+            "testStrategy": "Unit test aggregation logic with mock data to ensure correct computation of metrics."
+          },
+          {
+            "id": 3,
+            "title": "Update campaign_runs.summary in Database",
+            "description": "Persist the aggregated summary data into the campaign_runs.summary field in the database for each campaign.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement database update logic using the appropriate ORM or query builder. Ensure atomic updates and handle potential race conditions if multiple workers run concurrently.",
+            "status": "done",
+            "testStrategy": "Integration test to verify summary updates in the database after worker execution."
+          },
+          {
+            "id": 4,
+            "title": "Broadcast Aggregated Updates via WebSocket",
+            "description": "Emit the updated campaign summary to connected clients using the WebSocket gateway.",
+            "dependencies": [
+              3
+            ],
+            "details": "Integrate with the existing WebSocket gateway to broadcast summary updates to the relevant campaign channel. Ensure only authorized clients receive updates and handle connection errors gracefully.",
+            "status": "done",
+            "testStrategy": "Integration test to confirm clients receive real-time updates after summary changes."
+          },
+          {
+            "id": 5,
+            "title": "Monitor, Test, and Handle Failures in Aggregation Workflow",
+            "description": "Implement monitoring, error handling, and comprehensive tests for the entire aggregation and broadcast workflow.",
+            "dependencies": [
+              4
+            ],
+            "details": "Add logging, error handling, and retry logic for failed jobs. Write end-to-end tests covering scheduling, aggregation, DB update, and WebSocket broadcast. Monitor job execution and alert on failures.\n<info added on 2025-10-09T08:53:12.884Z>\nComprehensive test suites and documentation have been implemented for the aggregation workflow. StatusWorker and StatusAggregatorWorker now have detailed unit and integration tests covering metrics calculation, database updates, WebSocket broadcasting, error handling, scheduler lifecycle, campaign detection, deduplication, and cleanup logic—all using Vitest with mocked dependencies. Documentation (STATUS_AGGREGATION.md) provides a complete system overview, architecture, component descriptions, data flow diagrams, metrics specifications, WebSocket event definitions, configuration details, usage examples, monitoring and debugging guidance, error handling patterns, performance considerations, troubleshooting, and future improvement suggestions. This ensures robust operational support, clear debugging paths, and readiness for further enhancements.\n</info added on 2025-10-09T08:53:12.884Z>",
+            "status": "done",
+            "testStrategy": "E2E tests for the full workflow, simulate failures to verify error handling and retries."
+          }
+        ]
       },
       {
         "id": 6,
@@ -696,7 +750,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-09T08:38:25.960Z",
+      "updated": "2025-10-09T08:53:12.916Z",
       "description": "Tasks for master context"
     }
   }

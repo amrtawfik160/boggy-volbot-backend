@@ -11,11 +11,12 @@ import { EncryptionService } from './services/encryption.service'
 import { KeyManagementService } from './services/key-management.service'
 import { TransactionSigningService } from './services/transaction-signing.service'
 import { KeyRotationService } from './services/key-rotation.service'
+import { StatusMonitorService } from './services/status-monitor.service'
 import { WebSocketModule } from './websocket/websocket.module'
 
 @Module({
     imports: [WebSocketModule],
     controllers: [HealthController, MeController, TokensController, WalletsController, CampaignsController, DashboardController, SettingsController],
-    providers: [SupabaseService, EncryptionService, KeyManagementService, TransactionSigningService, KeyRotationService],
+    providers: [SupabaseService, EncryptionService, KeyManagementService, TransactionSigningService, KeyRotationService, StatusMonitorService],
 })
 export class AppModule {}

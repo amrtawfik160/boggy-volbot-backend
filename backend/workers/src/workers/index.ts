@@ -4,5 +4,6 @@ export * from './TradeBuyWorker';
 export * from './TradeSellWorker';
 export * from './DistributeWorker';
 export * from './StatusWorker';
+export * from './StatusAggregatorWorker';
 export * from './WebhookWorker';
 export * from './FundsGatherWorker';
