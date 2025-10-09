@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { createClient } from '@/lib/supabase/client'
 
-interface JobStatusPayload {
+export interface JobStatusPayload {
   eventId: string
   timestamp: string
   jobId: string
@@ -15,7 +15,7 @@ interface JobStatusPayload {
   error?: any
 }
 
-interface RunStatusPayload {
+export interface RunStatusPayload {
   eventId: string
   timestamp: string
   runId: string
@@ -26,9 +26,37 @@ interface RunStatusPayload {
   summary?: any
 }
 
+export interface CampaignStatusPayload {
+  runId: string
+  campaignId: string
+  status: string
+  metrics: {
+    totalJobs: number
+    succeededJobs: number
+    failedJobs: number
+    queuedJobs: number
+    runningJobs: number
+    cancelledJobs: number
+    successRate: number
+    byQueue: {
+      [queueName: string]: {
+        total: number
+        succeeded: number
+        failed: number
+        queued: number
+        running: number
+      }
+    }
+    totalExecutions: number
+    avgLatencyMs: number
+  }
+  updatedAt: string
+}
+
 interface WebSocketHookOptions {
   onJobStatus?: (payload: JobStatusPayload) => void
   onRunStatus?: (payload: RunStatusPayload) => void
+  onCampaignStatus?: (payload: CampaignStatusPayload) => void
   onConnect?: () => void
   onDisconnect?: () => void
   onError?: (error: Error) => void
@@ -50,6 +78,7 @@ export function useCampaignWebSocket(
   const {
     onJobStatus,
     onRunStatus,
+    onCampaignStatus,
     onConnect,
     onDisconnect,
     onError,
@@ -120,6 +149,8 @@ export function useCampaignWebSocket(
                         onJobStatus(event.payload)
                       } else if (event.type === 'run:status' && onRunStatus) {
                         onRunStatus(event.payload)
+                      } else if (event.type === 'campaign:status' && onCampaignStatus) {
+                        onCampaignStatus(event.payload)
                       }
                     })
                   }
@@ -162,6 +193,11 @@ export function useCampaignWebSocket(
         onRunStatus?.(payload)
       })
 
+      socket.on('campaign:status', (payload: CampaignStatusPayload) => {
+        console.log('[WebSocket] Campaign status update:', payload)
+        onCampaignStatus?.(payload)
+      })
+
       // Ping/pong for connection health check
       socket.on('pong', () => {
         console.log('[WebSocket] Pong received')
@@ -175,7 +211,7 @@ export function useCampaignWebSocket(
       setIsAuthenticated(false)
       onError?.(connectionError)
     }
-  }, [wsUrl, onConnect, onDisconnect, onJobStatus, onRunStatus, onError])
+  }, [wsUrl, onConnect, onDisconnect, onJobStatus, onRunStatus, onCampaignStatus, onError])
 
   const joinCampaign = useCallback(async (campaignId: string) => {
     if (!socketRef.current?.connected) {

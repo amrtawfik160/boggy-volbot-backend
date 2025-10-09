@@ -381,8 +381,63 @@
           4,
           6
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install and Configure socket.io-client v4 in Frontend",
+            "description": "Set up socket.io-client v4 in the frontend project to enable WebSocket communication.",
+            "dependencies": [],
+            "details": "Install socket.io-client using npm or yarn. Import the client in the main frontend entry point or a dedicated socket module. Ensure the correct version (v4) is used and configure the connection endpoint to match the backend WebSocket gateway URL.",
+            "status": "done",
+            "testStrategy": "Verify successful installation and import by initializing a basic connection and logging connection events."
+          },
+          {
+            "id": 2,
+            "title": "Implement Campaign-Specific Channel Subscription Logic",
+            "description": "Subscribe the frontend client to campaign-specific WebSocket channels to receive targeted real-time updates.",
+            "dependencies": [
+              1
+            ],
+            "details": "After establishing the socket connection, use the campaign ID to join the appropriate channel (e.g., socket.emit('join', { campaignId })). Ensure the client listens for relevant events (e.g., job status, run updates) on these channels.",
+            "status": "done",
+            "testStrategy": "Mock backend events for a campaign channel and verify the frontend receives and processes them."
+          },
+          {
+            "id": 3,
+            "title": "Handle WebSocket Reconnection and State Recovery",
+            "description": "Implement robust reconnection logic to maintain real-time updates during network interruptions.",
+            "dependencies": [
+              2
+            ],
+            "details": "Configure socket.io-client reconnection options (e.g., reconnectionAttempts, reconnectionDelay). On reconnect, re-subscribe to campaign channels and request any missed updates from the backend if necessary.",
+            "status": "done",
+            "testStrategy": "Simulate connection loss and recovery; verify that the client reconnects, re-subscribes, and restores UI state."
+          },
+          {
+            "id": 4,
+            "title": "Update UI State in Response to WebSocket Events",
+            "description": "Ensure the frontend UI reflects real-time changes by updating state based on incoming WebSocket events.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement event handlers that update relevant UI components (e.g., job status, campaign metrics) when events are received. Use state management (e.g., React context, Redux) to propagate changes throughout the app.",
+            "status": "done",
+            "testStrategy": "Trigger backend events and verify that UI components update in real time as expected."
+          },
+          {
+            "id": 5,
+            "title": "Write Component and Integration Tests for Real-Time Updates",
+            "description": "Develop automated tests to validate WebSocket integration and UI state changes.",
+            "dependencies": [
+              4
+            ],
+            "details": "Create unit tests for event handlers and state updates. Implement integration tests that mock WebSocket events and verify end-to-end UI behavior. Use testing libraries compatible with the frontend framework (e.g., Jest, React Testing Library).",
+            "status": "done",
+            "testStrategy": "Run automated test suites to ensure all real-time update scenarios are covered and UI remains consistent."
+          }
+        ]
       },
       {
         "id": 9,
@@ -750,7 +805,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-09T08:53:12.916Z",
+      "updated": "2025-10-09T09:00:59.748Z",
       "description": "Tasks for master context"
     }
   }
