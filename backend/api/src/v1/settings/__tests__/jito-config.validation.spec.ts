@@ -5,7 +5,8 @@ import { JitoConfigDto } from '../dto/jito-config.dto';
 describe('JitoConfigDto Validation', () => {
   describe('useJito', () => {
     it('should accept boolean true', async () => {
-      const dto = plainToInstance(JitoConfigDto, { useJito: true, jitoKey: '5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6X5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6X' });
+      // Use a valid 88-character base58 key
+      const dto = plainToInstance(JitoConfigDto, { useJito: true, jitoKey: 'wVWcYAdpZHvDYZvNyBnBxTwFdBDTyYvQvQXtgyaYjVX9sKVr7Qfc23gPiDFwaMnB3aqbKfifnroCKdd3c2VCynTT' });
       const errors = await validate(dto);
       expect(errors.length).toBe(0);
     });
@@ -34,7 +35,7 @@ describe('JitoConfigDto Validation', () => {
     it('should accept valid base58 private key (88 chars)', async () => {
       const dto = plainToInstance(JitoConfigDto, {
         useJito: true,
-        jitoKey: '5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6X5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6X'
+        jitoKey: 'wVWcYAdpZHvDYZvNyBnBxTwFdBDTyYvQvQXtgyaYjVX9sKVr7Qfc23gPiDFwaMnB3aqbKfifnroCKdd3c2VCynTT'
       });
       const errors = await validate(dto);
       expect(errors.length).toBe(0);
@@ -43,7 +44,7 @@ describe('JitoConfigDto Validation', () => {
     it('should accept valid base58 private key (87 chars)', async () => {
       const dto = plainToInstance(JitoConfigDto, {
         useJito: true,
-        jitoKey: '5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6X5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6'
+        jitoKey: 'fMA6SnFzDJMcWEtQxdK78UeXRgFmpVPbeXKaeNSjiR7P3zMt9qaFAtSsbJvy6mR131UZ6MQZU6Bqt3EvMmoXxkE'
       });
       const errors = await validate(dto);
       expect(errors.length).toBe(0);
@@ -239,7 +240,7 @@ describe('JitoConfigDto Validation', () => {
     it('should accept valid complete Jito config', async () => {
       const dto = plainToInstance(JitoConfigDto, {
         useJito: true,
-        jitoKey: '5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6X5J8QN1GqvuYXhgmkCPKLqUKZPvYvqJ5YQqQBqN6X',
+        jitoKey: 'wVWcYAdpZHvDYZvNyBnBxTwFdBDTyYvQvQXtgyaYjVX9sKVr7Qfc23gPiDFwaMnB3aqbKfifnroCKdd3c2VCynTT',
         blockEngineUrl: 'https://mainnet.block-engine.jito.wtf',
         jitoFee: 0.0001,
         bundleTransactionLimit: 4,
