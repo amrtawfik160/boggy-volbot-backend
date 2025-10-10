@@ -1,3 +1,4 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { SettingsController } from '../settings.controller';
@@ -10,8 +11,8 @@ describe('SettingsController Integration Tests', () => {
   const mockUser = { id: 'test-user-123' };
 
   const mockSupabaseService = {
-    getUserSettings: jest.fn(),
-    upsertUserSettings: jest.fn(),
+    getUserSettings: vi.fn(),
+    upsertUserSettings: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -28,7 +29,7 @@ describe('SettingsController Integration Tests', () => {
     controller = module.get<SettingsController>(SettingsController);
     supabaseService = module.get<SupabaseService>(SupabaseService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getSettings', () => {
