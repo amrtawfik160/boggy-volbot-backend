@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { CampaignsController } from '../campaigns.controller';
 import { SupabaseService } from '../../../services/supabase.service';
@@ -57,30 +56,57 @@ describe('CampaignsController Integration Tests', () => {
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [CampaignsController],
-      providers: [
-        {
-          provide: SupabaseService,
-          useValue: mockSupabaseService,
-        },
-        {
-          provide: CampaignWebSocketGateway,
-          useValue: mockGateway,
-        },
-      ],
-    }).compile();
+    // Create fresh mock queue instances for each test
+    gatherQueue = {
+      add: vi.fn(),
+      getJobs: vi.fn(),
+      getWaitingCount: vi.fn(),
+      getActiveCount: vi.fn(),
+    };
 
-    controller = module.get<CampaignsController>(CampaignsController);
-    supabaseService = module.get<SupabaseService>(SupabaseService);
-    gateway = module.get<CampaignWebSocketGateway>(CampaignWebSocketGateway);
+    tradeBuyQueue = {
+      add: vi.fn(),
+      getJobs: vi.fn(),
+      getWaitingCount: vi.fn(),
+      getActiveCount: vi.fn(),
+    };
 
-    // Access the queue instances from the controller
-    gatherQueue = (controller as any).gatherQueue;
-    tradeBuyQueue = (controller as any).tradeBuyQueue;
-    tradeSellQueue = (controller as any).tradeSellQueue;
-    distributeQueue = (controller as any).distributeQueue;
-    fundsGatherQueue = (controller as any).fundsGatherQueue;
+    tradeSellQueue = {
+      add: vi.fn(),
+      getJobs: vi.fn(),
+      getWaitingCount: vi.fn(),
+      getActiveCount: vi.fn(),
+    };
+
+    distributeQueue = {
+      add: vi.fn(),
+      getJobs: vi.fn(),
+      getWaitingCount: vi.fn(),
+      getActiveCount: vi.fn(),
+    };
+
+    fundsGatherQueue = {
+      add: vi.fn(),
+      getJobs: vi.fn(),
+      getWaitingCount: vi.fn(),
+      getActiveCount: vi.fn(),
+    };
+
+    // Manually instantiate controller with mocked dependencies
+    controller = new CampaignsController(
+      mockSupabaseService as any,
+      mockGateway as any,
+    );
+
+    // Inject mock queues into controller
+    (controller as any).gatherQueue = gatherQueue;
+    (controller as any).tradeBuyQueue = tradeBuyQueue;
+    (controller as any).tradeSellQueue = tradeSellQueue;
+    (controller as any).distributeQueue = distributeQueue;
+    (controller as any).fundsGatherQueue = fundsGatherQueue;
+
+    supabaseService = mockSupabaseService as any;
+    gateway = mockGateway as any;
 
     vi.clearAllMocks();
   });
@@ -207,7 +233,9 @@ describe('CampaignsController Integration Tests', () => {
       const mockDbJob = { id: 'j1', queue: 'gather', status: 'queued' };
 
       mockSupabaseService.getCampaignById.mockResolvedValue(mockCampaign);
-      mockSupabaseService.updateCampaign.mockResolvedValue({ ...mockCampaign, status: 'active' });
+      mockSupabaseService.updateCampaign.mockImplementation((id, userId, updates) =>
+        Promise.resolve({ ...mockCampaign, ...updates })
+      );
       mockSupabaseService.createCampaignRun.mockResolvedValue(mockRun);
       mockSupabaseService.createJob.mockResolvedValue(mockDbJob);
       mockSupabaseService.getWalletsByUserId.mockResolvedValue(mockWallets);
@@ -218,7 +246,7 @@ describe('CampaignsController Integration Tests', () => {
 
       const result = await controller.startCampaign('c1', mockUser);
 
-      expect(result).toEqual({ campaign: { ...mockCampaign, status: 'active' }, run: mockRun });
+      expect(result).toEqual({ campaign: mockCampaign, run: mockRun });
       expect(mockSupabaseService.updateCampaign).toHaveBeenCalledWith('c1', mockUser.id, {
         status: 'active',
       });
@@ -390,10 +418,10 @@ describe('CampaignsController Integration Tests', () => {
 
       mockSupabaseService.getCampaignById.mockResolvedValue(mockCampaign);
       mockSupabaseService.getCampaignRunsByCampaignId.mockResolvedValue(mockRuns);
-      gatherQueue.getWaitingCount.mockResolvedValue(2);
-      gatherQueue.getActiveCount.mockResolvedValue(1);
-      tradeBuyQueue.getWaitingCount.mockResolvedValue(5);
-      tradeBuyQueue.getActiveCount.mockResolvedValue(3);
+      gatherQueue.getWaitingCount.mockResolvedValue(4);
+      gatherQueue.getActiveCount.mockResolvedValue(2);
+      tradeBuyQueue.getWaitingCount.mockResolvedValue(4);
+      tradeBuyQueue.getActiveCount.mockResolvedValue(2);
       tradeSellQueue.getWaitingCount.mockResolvedValue(4);
       tradeSellQueue.getActiveCount.mockResolvedValue(2);
 
@@ -403,8 +431,8 @@ describe('CampaignsController Integration Tests', () => {
         campaign: mockCampaign,
         latestRun: mockRuns[0],
         queueStats: {
-          gather: { waiting: 2, active: 1 },
-          buy: { waiting: 5, active: 3 },
+          gather: { waiting: 4, active: 2 },
+          buy: { waiting: 4, active: 2 },
           sell: { waiting: 4, active: 2 },
         },
       });

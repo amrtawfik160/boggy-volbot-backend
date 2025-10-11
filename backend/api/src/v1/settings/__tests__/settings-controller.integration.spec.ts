@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { SettingsController } from '../settings.controller';
 import { SupabaseService } from '../../../services/supabase.service';
 
@@ -16,18 +15,9 @@ describe('SettingsController Integration Tests', () => {
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [SettingsController],
-      providers: [
-        {
-          provide: SupabaseService,
-          useValue: mockSupabaseService,
-        },
-      ],
-    }).compile();
-
-    controller = module.get<SettingsController>(SettingsController);
-    supabaseService = module.get<SupabaseService>(SupabaseService);
+    // Manually instantiate controller with mocked dependencies
+    controller = new SettingsController(mockSupabaseService as any);
+    supabaseService = mockSupabaseService as any;
 
     vi.clearAllMocks();
   });

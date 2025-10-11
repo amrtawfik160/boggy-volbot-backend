@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { TokensController } from '../tokens.controller';
 import { SupabaseService } from '../../../services/supabase.service';
 import { getTokenMetadata } from '../../../services/token-metadata.service';
@@ -28,18 +27,9 @@ describe('TokensController Integration Tests', () => {
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [TokensController],
-      providers: [
-        {
-          provide: SupabaseService,
-          useValue: mockSupabaseService,
-        },
-      ],
-    }).compile();
-
-    controller = module.get<TokensController>(TokensController);
-    supabaseService = module.get<SupabaseService>(SupabaseService);
+    // Manually instantiate controller with mocked dependencies
+    controller = new TokensController(mockSupabaseService as any);
+    supabaseService = mockSupabaseService as any;
 
     vi.clearAllMocks();
   });

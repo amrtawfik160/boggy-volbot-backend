@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
 import { DashboardController } from '../dashboard.controller';
 import { SupabaseService } from '../../../services/supabase.service';
 
@@ -10,25 +9,16 @@ describe('DashboardController Integration Tests', () => {
 
   const mockUser = { id: 'test-user-123' };
 
+  const mockSupabaseService = {
+    getCampaignsByUserId: vi.fn(),
+    getRecentExecutions: vi.fn(),
+    getRecentActivity: vi.fn(),
+  };
+
   beforeEach(async () => {
-    const mockSupabaseService = {
-      getCampaignsByUserId: vi.fn(),
-      getRecentExecutions: vi.fn(),
-      getRecentActivity: vi.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [DashboardController],
-      providers: [
-        {
-          provide: SupabaseService,
-          useValue: mockSupabaseService,
-        },
-      ],
-    }).compile();
-
-    controller = module.get<DashboardController>(DashboardController);
-    supabaseService = module.get(SupabaseService);
+    // Manually instantiate controller with mocked dependencies
+    controller = new DashboardController(mockSupabaseService as any);
+    supabaseService = mockSupabaseService;
 
     vi.clearAllMocks();
   });

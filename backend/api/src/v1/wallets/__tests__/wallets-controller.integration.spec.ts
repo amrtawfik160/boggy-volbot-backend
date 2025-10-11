@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
 import { WalletsController } from '../wallets.controller';
 import { SupabaseService } from '../../../services/supabase.service';
 import { KeyManagementService } from '../../../services/key-management.service';
@@ -26,23 +25,13 @@ describe('WalletsController Integration Tests', () => {
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [WalletsController],
-      providers: [
-        {
-          provide: SupabaseService,
-          useValue: mockSupabaseService,
-        },
-        {
-          provide: KeyManagementService,
-          useValue: mockKeyManagementService,
-        },
-      ],
-    }).compile();
-
-    controller = module.get<WalletsController>(WalletsController);
-    supabaseService = module.get<SupabaseService>(SupabaseService);
-    keyManagementService = module.get<KeyManagementService>(KeyManagementService);
+    // Manually instantiate controller with mocked dependencies
+    controller = new WalletsController(
+      mockSupabaseService as any,
+      mockKeyManagementService as any
+    );
+    supabaseService = mockSupabaseService as any;
+    keyManagementService = mockKeyManagementService as any;
 
     vi.clearAllMocks();
   });
