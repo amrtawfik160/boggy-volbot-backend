@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard';
 import { CurrentUser } from '../../decorators/user.decorator';
 import { SupabaseService } from '../../services/supabase.service';
@@ -37,6 +38,7 @@ export class WalletsController {
   }
 
   @Post()
+  @Throttle({ 'wallet-creation': { limit: 10, ttl: 60000 } })
   async createWallet(@Body() dto: CreateWalletDto, @CurrentUser() user: any) {
     let address: string;
     let encryptedPrivateKey: Buffer | undefined;

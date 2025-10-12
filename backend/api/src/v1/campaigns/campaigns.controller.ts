@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus, ValidationPipe } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard'
 import { CurrentUser } from '../../decorators/user.decorator'
 import { SupabaseService } from '../../services/supabase.service'
@@ -66,6 +67,7 @@ export class CampaignsController {
     }
 
     @Post(':id/start')
+    @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
     async startCampaign(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
@@ -402,6 +404,7 @@ export class CampaignsController {
     }
 
     @Post(':id/distribute')
+    @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
     async distribute(
         @Param('id') id: string,
         @CurrentUser() user: any,
@@ -450,6 +453,7 @@ export class CampaignsController {
     }
 
     @Post(':id/sell-only')
+    @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
     async startSellOnly(
         @Param('id') id: string,
         @CurrentUser() user: any,
@@ -511,6 +515,7 @@ export class CampaignsController {
     }
 
     @Post(':id/gather-funds')
+    @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
     async gatherFunds(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
