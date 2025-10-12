@@ -803,8 +803,8 @@
             "dependencies": [
               2
             ],
-            "details": "Create campaigns and trigger run creation under various scenarios. Check that runs are linked to the correct campaigns and that run metadata is accurate.",
-            "status": "pending",
+            "details": "Create campaigns and trigger run creation under various scenarios. Check that runs are linked to the correct campaigns and that run metadata is accurate.\n<info added on 2025-10-12T16:44:11.474Z>\nSuccessfully created comprehensive test suite for campaign run creation and association. Added 21 tests covering run creation on campaign start with correct initial status and timestamps, run creation for different operations (distribute, sell-only, gather funds), multiple runs per campaign support and retrieval, run metadata accuracy (started_at, ended_at timestamps), campaign and run status synchronization, WebSocket event emissions with run information, run ordering and history tracking, error handling for non-existent campaigns and database errors, campaign ownership verification, and all run statuses in history (running, paused, stopped, completed, failed). All 21 tests passing. Verified that runs are created correctly, associated with campaigns properly, and metadata is accurate. Test file: backend/api/src/v1/campaigns/__tests__/campaign-run-creation.spec.ts\n</info added on 2025-10-12T16:44:11.474Z>",
+            "status": "done",
             "testStrategy": "Integration tests; verify run records in the database and their linkage to campaigns."
           },
           {
@@ -982,7 +982,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-12T15:21:12.172Z",
+      "updated": "2025-10-12T16:44:06.396Z",
       "description": "Tasks for master context"
     }
   }
