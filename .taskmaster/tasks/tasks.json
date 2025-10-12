@@ -774,8 +774,84 @@
           2,
           19
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Validate Campaign Parameter Constraints",
+            "description": "Test that campaign parameters such as transaction size and slippage are validated and enforced according to business rules.",
+            "dependencies": [],
+            "details": "Implement tests to submit campaigns with various tx sizes and slippage values, including boundary and invalid cases. Ensure the system rejects or accepts inputs as per requirements.\n<info added on 2025-10-12T14:40:39.765Z>\nSuccessfully created comprehensive test suite for campaign parameter validation. Added 49 tests covering slippage (0-100% range, boundaries, invalid values), transaction size (minTxSize 0.00001-100 SOL, maxTxSize 0.00001-1000 SOL), Jito configuration (useJito boolean, jitoTip 0.00001-1 SOL), target volume (positive values only), schedule (cron string format), complete parameter combinations, boundary value testing, integration with CreateCampaignDto, and edge cases/special values. All tests are passing. Test file: backend/api/src/v1/campaigns/__tests__/campaign-params-validation.spec.ts\n</info added on 2025-10-12T14:40:39.765Z>",
+            "status": "done",
+            "testStrategy": "Unit and integration tests for parameter validation; attempt to create campaigns with out-of-range values and verify error handling."
+          },
+          {
+            "id": 2,
+            "title": "Verify Campaign Status Transitions",
+            "description": "Ensure campaigns transition correctly between lifecycle states (e.g., draft, active, completed, failed) under all expected and edge-case conditions.",
+            "dependencies": [
+              1
+            ],
+            "details": "Simulate campaign events (creation, activation, completion, failure) and verify that status changes follow the defined state machine. Test invalid transitions and rollback scenarios.",
+            "status": "pending",
+            "testStrategy": "Integration and E2E tests; manually trigger transitions and assert state correctness."
+          },
+          {
+            "id": 3,
+            "title": "Test Run Creation and Association",
+            "description": "Validate that campaign runs are created and associated correctly, including handling of multiple runs per campaign if supported.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create campaigns and trigger run creation under various scenarios. Check that runs are linked to the correct campaigns and that run metadata is accurate.",
+            "status": "pending",
+            "testStrategy": "Integration tests; verify run records in the database and their linkage to campaigns."
+          },
+          {
+            "id": 4,
+            "title": "Assess Concurrent Campaign Handling",
+            "description": "Test system behavior when multiple campaigns are created, modified, or executed concurrently, ensuring isolation and correct processing.",
+            "dependencies": [
+              3
+            ],
+            "details": "Simulate concurrent campaign operations (creation, updates, execution) from multiple users or processes. Check for race conditions, data corruption, or resource contention.",
+            "status": "pending",
+            "testStrategy": "Concurrency and stress tests; monitor for errors, deadlocks, or inconsistent states."
+          },
+          {
+            "id": 5,
+            "title": "Enforce Wallet Requirements for Campaigns",
+            "description": "Verify that campaigns enforce wallet requirements, such as minimum balance, wallet type, and authorization checks.",
+            "dependencies": [
+              4
+            ],
+            "details": "Attempt to create and execute campaigns with wallets that do not meet requirements (e.g., insufficient funds, wrong type). Confirm that the system blocks unauthorized actions.",
+            "status": "pending",
+            "testStrategy": "Integration tests; use test wallets with varying properties and assert correct enforcement."
+          },
+          {
+            "id": 6,
+            "title": "Test Jito/Legacy Mode Switching Logic",
+            "description": "Ensure campaigns can switch between Jito and legacy execution modes as required, and that mode-specific logic is correctly applied.",
+            "dependencies": [
+              5
+            ],
+            "details": "Create campaigns in both Jito and legacy modes. Switch modes mid-lifecycle if supported, and verify that execution logic, parameters, and outcomes are as expected.",
+            "status": "pending",
+            "testStrategy": "Integration and E2E tests; check logs, execution paths, and outcomes for both modes."
+          },
+          {
+            "id": 7,
+            "title": "Manual and Exploratory Edge Case Validation",
+            "description": "Perform manual and exploratory testing to uncover edge cases and business logic flaws not covered by automated tests.",
+            "dependencies": [
+              6
+            ],
+            "details": "Use creative and adversarial testing approaches to simulate unexpected user actions, invalid data flows, and potential abuse scenarios. Document and report any discovered issues.",
+            "status": "pending",
+            "testStrategy": "Manual exploratory testing; follow OWASP business logic testing guidelines and document findings."
+          }
+        ]
       },
       {
         "id": 22,
@@ -906,7 +982,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-12T12:19:30.948Z",
+      "updated": "2025-10-12T14:40:35.465Z",
       "description": "Tasks for master context"
     }
   }
