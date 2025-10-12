@@ -61,6 +61,9 @@ describe('DistributeWorker', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
+    // Reset the mockDistributeSol function
+    mockDistributeSol.mockReset();
+
     // Create mock Supabase client with proper query builder chain
     mockSupabase = {
       from: vi.fn().mockReturnThis(),
@@ -73,9 +76,11 @@ describe('DistributeWorker', () => {
     mockRedis = new IORedis();
     mockConnection = {
       getBalance: vi.fn().mockResolvedValue(1_000_000_000), // 1 SOL in lamports
-      getLatestBlockhash: vi.fn().mockResolvedValue({ blockhash: 'mock-blockhash' }),
+      getLatestBlockhash: vi.fn().mockResolvedValue({ blockhash: 'mock-blockhash', lastValidBlockHeight: 1000 }),
       getRecentBlockhash: vi.fn().mockResolvedValue({ blockhash: 'mock-blockhash', feeCalculator: { lamportsPerSignature: 5000 } }),
       getMinimumBalanceForRentExemption: vi.fn().mockResolvedValue(890880),
+      sendRawTransaction: vi.fn().mockResolvedValue('mock-signature'),
+      confirmTransaction: vi.fn().mockResolvedValue({ value: { err: null } }),
     } as any;
     mockTradeBuyQueue = new Queue('trade.buy', { connection: mockRedis });
 
