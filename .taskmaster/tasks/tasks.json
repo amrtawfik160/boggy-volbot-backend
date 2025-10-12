@@ -825,8 +825,8 @@
             "dependencies": [
               4
             ],
-            "details": "Attempt to create and execute campaigns with wallets that do not meet requirements (e.g., insufficient funds, wrong type). Confirm that the system blocks unauthorized actions.",
-            "status": "pending",
+            "details": "Attempt to create and execute campaigns with wallets that do not meet requirements (e.g., insufficient funds, wrong type). Confirm that the system blocks unauthorized actions.\n<info added on 2025-10-12T16:55:52.991Z>\nSuccessfully developed and executed a comprehensive test suite for enforcing wallet requirements in campaigns. The suite includes 43 tests across various categories, ensuring robust validation of wallet ownership, existence, active status, type, authorization, creation, and management. All tests have been executed with successful results, confirming that the system effectively blocks unauthorized actions when wallet requirements are not met. The test suite is documented in the file backend/api/src/v1/campaigns/__tests__/campaign-wallet-requirements.spec.ts.\n</info added on 2025-10-12T16:55:52.991Z>",
+            "status": "done",
             "testStrategy": "Integration tests; use test wallets with varying properties and assert correct enforcement."
           },
           {
@@ -982,7 +982,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-12T16:50:25.583Z",
+      "updated": "2025-10-12T16:55:53.077Z",
       "description": "Tasks for master context"
     }
   }
