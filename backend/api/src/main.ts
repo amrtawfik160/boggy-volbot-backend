@@ -2,8 +2,12 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { validateEnvironmentConfig } from './config/environment';
 
 async function bootstrap() {
+  // Validate environment configuration before starting
+  const envConfig = validateEnvironmentConfig();
+
   const app = await NestFactory.create(AppModule);
 
   // Enable global validation pipe with class-validator
@@ -20,13 +24,14 @@ async function bootstrap() {
 
   app.enableCors({ origin: true, credentials: true });
   app.setGlobalPrefix('v1');
-  const port = process.env.API_PORT ? Number(process.env.API_PORT) : 3001;
-  await app.listen(port);
+  await app.listen(envConfig.apiPort);
+
+  console.log(`✅ API is running on port ${envConfig.apiPort}`);
 }
 
 bootstrap().catch((err) => {
   // eslint-disable-next-line no-console
-  console.error('API bootstrap failed', err);
+  console.error('❌ API bootstrap failed:', err);
   process.exit(1);
 });
 
