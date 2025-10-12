@@ -958,16 +958,62 @@
       {
         "id": 24,
         "title": "Verify Trading Execution Logic",
-        "description": "Test buy/sell transactions, executor switching, logging, RPC failover, confirmation polling, partial fills.",
-        "details": "Ensure buy/sell jobs use correct slippage, Jito tip/auth, legacy fallback, log signatures, handle RPC failover, poll for confirmations, handle partial fills.",
-        "testStrategy": "Integration and E2E tests, simulate RPC failures and partial fills.",
-        "priority": "high",
+        "description": "Test buy/sell transactions, executor switching, logging, RPC failover, confirmation polling, partial fills. Ensure comprehensive test coverage for all critical trading execution paths, including failover and edge cases.",
+        "status": "in-progress",
         "dependencies": [
           3,
           19
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "Ensure buy/sell jobs use correct slippage (including slippage tolerance and calculation), Jito tip/auth, legacy fallback, log transaction signatures, handle RPC failover (including multiple endpoints), poll for confirmations with retries and failover, and handle partial fills. Expand test coverage to explicitly verify all these behaviors, especially in failure and edge-case scenarios. Address gaps identified in implementation: LegacyExecutor and JitoExecutor lack RPC failover; confirmation polling lacks retry/failover logic; partial fill handling is not implemented; transaction signature logging and slippage verification are not explicitly tested.",
+        "testStrategy": "Integration and E2E tests. Simulate and verify: (1) RPC failures and failover (including multiple endpoints), (2) confirmation polling with retries and failover, (3) partial fill scenarios, (4) transaction signature logging, and (5) slippage calculation and enforcement. Ensure tests cover both LegacyExecutor and JitoExecutor, and validate that TradingService retry logic is sufficient for all critical paths.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Test RPC Failover Scenarios",
+            "description": "Create integration tests that simulate RPC endpoint failures during trade execution for both LegacyExecutor and JitoExecutor. Verify that failover to backup endpoints occurs as expected and that trades are not lost or duplicated.",
+            "dependencies": [],
+            "details": "Simulate primary RPC endpoint failure and ensure system switches to secondary/backup endpoints. Validate that transaction execution, confirmation polling, and logging continue to function correctly after failover.",
+            "status": "pending",
+            "testStrategy": "Integration tests with mocked RPC endpoints. Force failures and verify failover logic, including for confirmation polling."
+          },
+          {
+            "id": 2,
+            "title": "Test Confirmation Polling with Retries and Failover",
+            "description": "Expand confirmation polling tests to include retry logic and failover scenarios. Ensure that if confirmation polling fails or times out, the system retries and/or switches endpoints as needed.",
+            "dependencies": [],
+            "details": "Test both LegacyExecutor (confirmTransaction) and JitoExecutor (onBundleResult) for confirmation polling under failure conditions. Validate that retries and endpoint switching are triggered and that final confirmation status is accurate.",
+            "status": "pending",
+            "testStrategy": "Integration/E2E tests simulating confirmation polling failures, timeouts, and endpoint switching."
+          },
+          {
+            "id": 3,
+            "title": "Test Partial Fill Handling",
+            "description": "Implement and test explicit detection and handling of partial fills in trade execution. Ensure that the system correctly identifies, logs, and responds to partial fills.",
+            "dependencies": [],
+            "details": "Simulate scenarios where only part of an order is filled. Verify that the system logs partial fills, updates order status appropriately, and triggers any required follow-up actions.",
+            "status": "pending",
+            "testStrategy": "Integration/E2E tests with mocked partial fill responses from trading endpoints."
+          },
+          {
+            "id": 4,
+            "title": "Verify Transaction Signature Logging",
+            "description": "Test that all executed trades have their transaction signatures correctly logged for both LegacyExecutor and JitoExecutor paths.",
+            "dependencies": [],
+            "details": "Ensure that transaction signatures are captured and stored in logs or persistent storage for all successful and failed trades.",
+            "status": "pending",
+            "testStrategy": "Unit/integration tests that inspect logs and storage for presence and correctness of transaction signatures."
+          },
+          {
+            "id": 5,
+            "title": "Verify Slippage Calculation and Enforcement",
+            "description": "Test that slippage is calculated correctly and that slippage tolerance is enforced for all trades. Ensure that trades exceeding slippage tolerance are rejected or handled according to configuration.",
+            "dependencies": [],
+            "details": "Simulate trades with varying market conditions and slippage. Validate that slippage is computed as per formula ((Executed Price - Expected Price) / Expected Price) × 100, and that slippage tolerance settings are respected.",
+            "status": "pending",
+            "testStrategy": "Unit/integration tests with controlled price feeds and order book mocks to trigger slippage scenarios."
+          }
+        ]
       },
       {
         "id": 25,
@@ -1056,7 +1102,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-12T18:29:40.820Z",
+      "updated": "2025-10-12T18:31:30.575Z",
       "description": "Tasks for master context"
     }
   }
