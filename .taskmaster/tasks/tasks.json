@@ -836,8 +836,8 @@
             "dependencies": [
               5
             ],
-            "details": "Create campaigns in both Jito and legacy modes. Switch modes mid-lifecycle if supported, and verify that execution logic, parameters, and outcomes are as expected.",
-            "status": "pending",
+            "details": "Create campaigns in both Jito and legacy modes. Switch modes mid-lifecycle if supported, and verify that execution logic, parameters, and outcomes are as expected.\n<info added on 2025-10-12T17:02:03.190Z>\nSuccessfully created comprehensive test suite for Jito/Legacy mode switching logic in campaigns. Added 39 tests covering all major configuration, switching, persistence, user override, edge case, and execution logic scenarios for both modes. All tests are passing. Test file: backend/api/src/v1/campaigns/__tests__/campaign-jito-legacy-mode.spec.ts\n</info added on 2025-10-12T17:02:03.190Z>",
+            "status": "done",
             "testStrategy": "Integration and E2E tests; check logs, execution paths, and outcomes for both modes."
           },
           {
@@ -982,7 +982,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-12T16:55:53.077Z",
+      "updated": "2025-10-12T17:02:03.258Z",
       "description": "Tasks for master context"
     }
   }
