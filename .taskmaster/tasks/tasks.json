@@ -864,8 +864,54 @@
           1,
           19
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Test job enqueuing with priority and delay",
+            "description": "Verify that jobs are correctly enqueued with specified priority and delay, and that these attributes are respected by the queue.",
+            "dependencies": [],
+            "details": "Write unit and integration tests to enqueue jobs with different priorities and delays. Assert that jobs are processed in the correct order and at the expected time. Mock the queue if necessary to isolate timing and ordering logic.\n<info added on 2025-10-12T17:27:06.423Z>\nSuccessfully implemented a comprehensive test suite for job enqueuing with priority and delay, covering 26 test cases across priority, delay, combined scenarios, real-world campaign use cases, edge cases, and job retrieval. All tests are passing and validate that jobs are enqueued with correct priority and delay, processed in the expected order, and that metadata (priority, delay, state) is preserved and retrievable. The suite includes tests for default, high/low, and extreme priority values; immediate, delayed, and very large delay scenarios; priority ordering across job types; real-world campaign patterns (buy/sell/gather/pause); negative and edge case inputs; and concurrent enqueuing. Job retrieval by state, count, and ID is also verified. The test file is located at backend/api/src/v1/campaigns/__tests__/job-enqueuing-priority-delay.spec.ts.\n</info added on 2025-10-12T17:27:06.423Z>",
+            "status": "done",
+            "testStrategy": "Unit tests for enqueue logic; integration tests with mocked time to verify scheduling."
+          },
+          {
+            "id": 2,
+            "title": "Validate retry logic and exponential backoff",
+            "description": "Ensure failed jobs are retried according to configured policies, using exponential backoff between attempts.",
+            "dependencies": [],
+            "details": "Simulate job failures and verify that retries are triggered with increasing delays. Check that the retry count is tracked and that jobs eventually move to the dead-letter queue (DLQ) after max retries. Test both transient and permanent failures.",
+            "status": "pending",
+            "testStrategy": "Unit tests for retry count and delay calculation; integration tests with forced failures to observe retry behavior."
+          },
+          {
+            "id": 3,
+            "title": "Verify idempotency and duplicate prevention",
+            "description": "Confirm that the system prevents duplicate job execution through idempotency keys or similar mechanisms.",
+            "dependencies": [],
+            "details": "Enqueue the same job multiple times with identical idempotency keys. Assert that only one instance is executed. Test edge cases such as job restarts, crashes, and network partitions to ensure no duplicates are processed.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests with repeated enqueue attempts; chaos testing for crash recovery scenarios."
+          },
+          {
+            "id": 4,
+            "title": "Test concurrency limits and queue isolation",
+            "description": "Ensure that concurrency limits are enforced per queue and that jobs do not interfere across queues.",
+            "dependencies": [],
+            "details": "Configure multiple queues with different concurrency limits. Enqueue jobs to saturate each queue and verify that limits are respected. Check that high-priority jobs are not starved by lower-priority ones in separate queues.",
+            "status": "pending",
+            "testStrategy": "Integration tests with parallel job enqueuing; load testing to verify limits under stress."
+          },
+          {
+            "id": 5,
+            "title": "Validate graceful shutdown and DLQ handling",
+            "description": "Confirm that the system handles shutdowns gracefully, completing in-progress jobs and moving failed jobs to the DLQ.",
+            "dependencies": [],
+            "details": "Initiate a shutdown during job processing and verify that in-progress jobs are allowed to finish. Ensure that any jobs failing during shutdown are moved to the DLQ. Test both normal and forced shutdown scenarios.",
+            "status": "pending",
+            "testStrategy": "Integration tests simulating shutdown during job execution; verify DLQ contents post-shutdown."
+          }
+        ]
       },
       {
         "id": 23,
@@ -982,7 +1028,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-12T17:18:22.103Z",
+      "updated": "2025-10-12T17:27:14.333Z",
       "description": "Tasks for master context"
     }
   }
