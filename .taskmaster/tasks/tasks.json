@@ -864,7 +864,7 @@
           1,
           19
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -916,16 +916,44 @@
       {
         "id": 23,
         "title": "Verify Wallet & Token Logic",
-        "description": "Test wallet encryption, balance queries, token metadata, pool discovery, and caching.",
-        "details": "Verify private key encryption, SOL/SPL balance queries, fetch token metadata from Solana indexers, pool discovery via Raydium/Orca APIs, cache pool info in Redis with TTL.",
-        "testStrategy": "Integration tests for wallet/token endpoints, cache validation.",
-        "priority": "high",
+        "description": "Test wallet encryption and token metadata (already verified), and implement/test SOL/SPL balance queries, pool discovery, and Redis caching in the API layer.",
+        "status": "done",
         "dependencies": [
           9,
           19
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "Wallet encryption and token metadata logic are fully implemented and tested in their respective services. However, SOL/SPL balance queries, pool discovery via Raydium/Orca APIs, and Redis caching with TTL for pool/token data are missing in the API layer and must be implemented and tested. The task now focuses on adding these missing features to the API services, ensuring coverage for balance queries, pool discovery, and caching, while preserving the already completed encryption and metadata logic.",
+        "testStrategy": "Maintain existing integration/unit tests for wallet encryption and token metadata. Add new integration tests for SOL/SPL balance query endpoints, pool discovery endpoints, and Redis caching validation in the API layer. Ensure coverage for error handling, data consistency, and TTL expiry.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement SOL/SPL Balance Query Endpoints in API",
+            "description": "Add API service methods to query SOL and SPL token balances for a given wallet address. Ensure queries use Solana RPC and handle errors gracefully.",
+            "dependencies": [],
+            "details": "Implement endpoints in the API layer (not just workers/legacy). Validate correct balance retrieval and error handling for invalid addresses.",
+            "status": "done",
+            "testStrategy": "Integration tests for balance query endpoints, including edge cases (invalid address, zero balance, large balance)."
+          },
+          {
+            "id": 2,
+            "title": "Implement Pool Discovery Logic in API Layer",
+            "description": "Add pool discovery logic for Raydium and Orca to the API services. Ensure pools can be discovered and queried via API endpoints.",
+            "dependencies": [],
+            "details": "Move or reimplement pool discovery logic from workers/legacy into API services. Support querying pools by token pair and protocol.",
+            "status": "done",
+            "testStrategy": "Integration tests for pool discovery endpoints, including protocol selection, token pair queries, and error handling."
+          },
+          {
+            "id": 3,
+            "title": "Implement Redis Caching with TTL for Pool/Token Data",
+            "description": "Add Redis caching for pool and token metadata in the API layer, with configurable TTL. Ensure cache is used for repeated queries.",
+            "dependencies": [],
+            "details": "Integrate Redis (not just BullMQ) for caching pool/token data. Implement cache invalidation and TTL expiry logic.",
+            "status": "done",
+            "testStrategy": "Integration tests for cache hits/misses, TTL expiry, and data consistency after cache invalidation."
+          }
+        ]
       },
       {
         "id": 24,
@@ -1028,7 +1056,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-12T18:09:09.669Z",
+      "updated": "2025-10-12T18:29:40.820Z",
       "description": "Tasks for master context"
     }
   }
