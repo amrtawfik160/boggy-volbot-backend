@@ -47,15 +47,13 @@ describe('FundsGatherWorker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Create a proper mock chain
-    const mockChain = {
+    // Create a proper mock Supabase client with query builder chain
+    mockSupabase = {
       from: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn(),
     };
-
-    mockSupabase = mockChain;
 
     mockRedis = new IORedis();
     mockConnection = {
@@ -95,14 +93,20 @@ describe('FundsGatherWorker', () => {
         },
       ];
 
-      mockSupabase.single.mockResolvedValueOnce({
-        data: mockCampaign,
-        error: null,
+      // First query: .from().select().eq().single() for campaign
+      mockSupabase.eq.mockReturnValueOnce({
+        single: vi.fn().mockResolvedValueOnce({
+          data: mockCampaign,
+          error: null,
+        })
       });
 
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: mockWallets,
-        error: null,
+      // Second query: .from().select().eq().eq() for wallets
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({
+          data: mockWallets,
+          error: null,
+        })
       });
 
       const result = await (fundsGatherWorker as any).execute(
@@ -122,9 +126,11 @@ describe('FundsGatherWorker', () => {
     });
 
     it('should handle campaign not found error', async () => {
-      mockSupabase.single.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'Campaign not found' },
+      mockSupabase.eq.mockReturnValueOnce({
+        single: vi.fn().mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Campaign not found' },
+        })
       });
 
       await expect(
@@ -142,14 +148,20 @@ describe('FundsGatherWorker', () => {
     });
 
     it('should handle no active wallets error', async () => {
-      mockSupabase.single.mockResolvedValueOnce({
-        data: { id: 'campaign-123', user_id: 'user-456' },
-        error: null,
+      // First query: .from().select().eq().single() for campaign
+      mockSupabase.eq.mockReturnValueOnce({
+        single: vi.fn().mockResolvedValueOnce({
+          data: { id: 'campaign-123', user_id: 'user-456' },
+          error: null,
+        })
       });
 
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: [],
-        error: null,
+      // Second query: .from().select().eq().eq() for wallets
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({
+          data: [],
+          error: null,
+        })
       });
 
       await expect(
@@ -183,8 +195,15 @@ describe('FundsGatherWorker', () => {
         },
       ];
 
-      mockSupabase.single.mockResolvedValueOnce({ data: mockCampaign, error: null });
-      mockSupabase.eq.mockResolvedValueOnce({ data: mockWallets, error: null });
+      // First query: .from().select().eq().single() for campaign
+      mockSupabase.eq.mockReturnValueOnce({
+        single: vi.fn().mockResolvedValueOnce({ data: mockCampaign, error: null })
+      });
+
+      // Second query: .from().select().eq().eq() for wallets
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({ data: mockWallets, error: null })
+      });
 
       // Mock balance check to return 0 for second wallet
       (mockConnection.getBalance as any).mockResolvedValue(0);
@@ -210,8 +229,15 @@ describe('FundsGatherWorker', () => {
       const mockCampaign = { id: 'campaign-123', user_id: 'user-456' };
       const mockWallets = [{ id: '1', address: 'wallet-1', encrypted_private_key: Buffer.from('key-1'), is_active: true }];
 
-      mockSupabase.single.mockResolvedValueOnce({ data: mockCampaign, error: null });
-      mockSupabase.eq.mockResolvedValueOnce({ data: mockWallets, error: null });
+      // First query: .from().select().eq().single() for campaign
+      mockSupabase.eq.mockReturnValueOnce({
+        single: vi.fn().mockResolvedValueOnce({ data: mockCampaign, error: null })
+      });
+
+      // Second query: .from().select().eq().eq() for wallets
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({ data: mockWallets, error: null })
+      });
 
       const mockUpdateProgress = vi.fn();
 

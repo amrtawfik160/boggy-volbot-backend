@@ -74,7 +74,7 @@ export class WebhookWorker extends BaseWorker<WebhookJobData, WebhookJobResult> 
       })
     );
 
-    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== undefined).length;
 
     await context.updateProgress(100, `Webhooks sent: ${successCount}/${webhooks.length}`);
 

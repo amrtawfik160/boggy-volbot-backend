@@ -29,14 +29,12 @@ describe('WebhookWorker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Create a mock chain that properly returns itself
-    const mockChain = {
+    // Create a mock Supabase client with proper query builder chain
+    mockSupabase = {
       from: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
     };
-
-    mockSupabase = mockChain;
 
     mockRedis = new IORedis();
     webhookWorker = new WebhookWorker({
@@ -64,9 +62,12 @@ describe('WebhookWorker', () => {
         },
       ];
 
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: mockWebhooks,
-        error: null,
+      // Setup mock chain: .from().select().eq().eq() - the second eq() resolves with data
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({
+          data: mockWebhooks,
+          error: null,
+        })
       });
 
       (global.fetch as any).mockResolvedValue({
@@ -111,9 +112,11 @@ describe('WebhookWorker', () => {
         },
       ];
 
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: mockWebhooks,
-        error: null,
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({
+          data: mockWebhooks,
+          error: null,
+        })
       });
 
       (global.fetch as any).mockResolvedValue({
@@ -141,9 +144,11 @@ describe('WebhookWorker', () => {
     });
 
     it('should handle no active webhooks gracefully', async () => {
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: [],
-        error: null,
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({
+          data: [],
+          error: null,
+        })
       });
 
       const result = await (webhookWorker as any).execute(
@@ -179,9 +184,11 @@ describe('WebhookWorker', () => {
         },
       ];
 
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: mockWebhooks,
-        error: null,
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({
+          data: mockWebhooks,
+          error: null,
+        })
       });
 
       // First fails, second succeeds
@@ -207,9 +214,11 @@ describe('WebhookWorker', () => {
 
   describe('Progress Tracking', () => {
     it('should update progress at correct stages', async () => {
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: [{ url: 'https://example.com', secret: 'secret', events: ['test'], is_active: true }],
-        error: null,
+      mockSupabase.eq.mockReturnValueOnce({
+        eq: vi.fn().mockResolvedValueOnce({
+          data: [{ url: 'https://example.com', secret: 'secret', events: ['test'], is_active: true }],
+          error: null,
+        })
       });
 
       (global.fetch as any).mockResolvedValue({ ok: true, status: 200 });
