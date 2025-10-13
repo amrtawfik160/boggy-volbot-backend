@@ -1296,8 +1296,65 @@
           26,
           27
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure Lint and Type-Check Workflow for Pull Requests",
+            "description": "Set up a GitHub Actions workflow to automatically run linting and type-checking on every pull request.",
+            "dependencies": [],
+            "details": "Create a YAML workflow file that triggers on pull_request events. Use appropriate actions to run lint (e.g., ESLint) and type-check (e.g., TypeScript) jobs. Ensure results are reported in the PR checks. Apply filters to only run on relevant branches and use concurrency settings to avoid duplicate runs.\n<info added on 2025-10-13T19:59:42.405Z>\nCreated .github/workflows/lint-and-typecheck.yml workflow that triggers on pull_request events targeting main and develop branches, uses concurrency groups to cancel duplicate runs, and defines separate jobs for frontend, backend/api, and backend/workers. Each job runs ESLint, type-check (where applicable), and Prettier checks using Node.js 20 with npm caching for faster execution. Workflow is configured to only run when relevant paths change (frontend/**, backend/**, or the workflow file itself).\n</info added on 2025-10-13T19:59:42.405Z>",
+            "status": "done",
+            "testStrategy": "Verify that PRs trigger lint/type-check jobs and fail on errors. Confirm results are visible in PR checks."
+          },
+          {
+            "id": 2,
+            "title": "Implement Automated Test Workflow for CI",
+            "description": "Set up a workflow to run automated tests on code changes for both PRs and merges to main.",
+            "dependencies": [
+              1
+            ],
+            "details": "Define a workflow that triggers on pull_request and push to main. Use jobs to run unit and integration tests. Cache dependencies for faster runs. Ensure test results are reported and workflow fails on test errors. Use concurrency to prevent overlapping runs.\n<info added on 2025-10-13T20:00:34.146Z>\nCreated .github/workflows/test.yml to automate test runs on pull requests targeting main or develop branches and on pushes to main. The workflow uses concurrency groups to prevent overlapping runs and executes frontend, backend/api, and backend/workers test jobs in parallel. For backend tests, PostgreSQL and Redis service containers are provisioned to mirror production dependencies. Node.js 20 is used with npm caching enabled for faster dependency installation. Each test job uploads its coverage report as an artifact with a 7-day retention period. A dedicated test-summary job aggregates results from all test jobs and fails the workflow if any test job fails.\n</info added on 2025-10-13T20:00:34.146Z>",
+            "status": "done",
+            "testStrategy": "Confirm tests run on PR and main merges. Validate that failed tests block merges and results are reported."
+          },
+          {
+            "id": 3,
+            "title": "Create Build and Deployment Workflow for Main Branch",
+            "description": "Set up a workflow to build the application and deploy it automatically when changes are merged to the main branch.",
+            "dependencies": [
+              2
+            ],
+            "details": "Configure a workflow triggered by push events to main. Include build steps (e.g., npm build) and deployment steps (e.g., upload to cloud provider). Manage secrets securely for deployment credentials. Use concurrency and cancel-in-progress to avoid conflicting deployments.\n<info added on 2025-10-13T20:02:15.907Z>\nCreated .github/workflows/build-and-deploy.yml to trigger on pushes to main, building Docker images for frontend, api, and workers in parallel with Docker layer caching for faster builds. Images are pushed to GitHub Container Registry (ghcr.io) and tagged with branch name, commit SHA, and latest. Added frontend/Dockerfile with a multi-stage build for Next.js and updated frontend/next.config.mjs to enable standalone output for Docker. The workflow includes a staging deployment job with rollback support (currently commented for manual setup). Concurrency control is implemented to prevent conflicting deployments.\n</info added on 2025-10-13T20:02:15.907Z>",
+            "status": "done",
+            "testStrategy": "Deploy to a staging environment and verify successful build and deployment. Rollback on failure."
+          },
+          {
+            "id": 4,
+            "title": "Automate Database Migration Workflow",
+            "description": "Set up a workflow to run database migrations automatically as part of the deployment process.",
+            "dependencies": [
+              3
+            ],
+            "details": "Integrate migration tooling (e.g., Prisma or node-pg-migrate) into the deployment workflow. Ensure migrations run after build and before application start. Implement rollback procedures for failed migrations. Securely manage DB credentials using GitHub secrets.\n<info added on 2025-10-13T20:03:11.340Z>\nAdded .github/workflows/database-migrations.yml workflow supporting both automatic (on push to main) and manual (workflow_dispatch) triggers. Workflow validates migration files before execution, runs migrations for staging automatically when migration files change, and provides manual dispatch for production migrations with safety checks. Supports multiple migration actions: up, down, status, redo, and includes a dry-run mode for testing migrations without applying changes. Implements concurrency control to prevent overlapping migration runs. On failure, provides rollback instructions. Integrates with node-pg-migrate scripts from backend/api package.json. Requires DATABASE_URL secrets for staging and production environments.\n</info added on 2025-10-13T20:03:11.340Z>",
+            "status": "done",
+            "testStrategy": "Test migrations on a staging database. Simulate failures to verify rollback procedures."
+          },
+          {
+            "id": 5,
+            "title": "Document and Maintain Workflow Organization and Best Practices",
+            "description": "Create documentation for all workflows, outlining triggers, responsibilities, and maintenance procedures.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Write clear documentation for each workflow, including YAML file locations, triggers, job descriptions, and secrets management. Follow best practices for splitting workflows by responsibility, using reusable actions, and maintaining clean, readable files.\n<info added on 2025-10-13T20:05:31.287Z>\nAdded comprehensive documentation for CI/CD workflows, including:\n\n- .github/workflows/README.md: Full documentation covering all workflows, setup requirements, best practices, troubleshooting, and maintenance guidelines.\n- .github/CICD_QUICKREF.md: Quick reference guide with common commands, workflow triggers, deployment procedures, and emergency rollback instructions.\n- Documentation includes workflow diagrams, secret configuration, security best practices, performance optimization tips, and troubleshooting guides.\n- Documentation covers all four workflows: lint-and-typecheck, test, build-and-deploy, and database-migrations.\n- Includes local testing commands, manual deployment procedures, and a workflow maintenance checklist.\n</info added on 2025-10-13T20:05:31.287Z>",
+            "status": "done",
+            "testStrategy": "Review documentation for completeness and clarity. Ensure new team members can understand and maintain workflows."
+          }
+        ]
       },
       {
         "id": 29,
@@ -1332,7 +1389,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T19:55:48.780Z",
+      "updated": "2025-10-13T20:05:40.825Z",
       "description": "Tasks for master context"
     }
   }
