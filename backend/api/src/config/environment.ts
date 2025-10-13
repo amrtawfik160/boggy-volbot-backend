@@ -3,6 +3,10 @@
  * Validates all required environment variables on startup
  */
 
+import { createLogger } from './logger';
+
+const logger = createLogger({ name: 'environment' });
+
 export enum Environment {
   Development = 'development',
   Staging = 'staging',
@@ -130,21 +134,21 @@ export function validateEnvironmentConfig(): EnvironmentConfig {
     const config = loadEnvironmentConfig();
 
     // Log environment info
-    console.log(`🚀 Starting API in ${config.nodeEnv} mode`);
-    console.log(`📡 API Port: ${config.apiPort}`);
-    console.log(`🗄️  Supabase URL: ${config.supabaseUrl}`);
-    console.log(`📦 Redis URL: ${config.redisUrl}`);
+    logger.info({
+      nodeEnv: config.nodeEnv,
+      apiPort: config.apiPort,
+      supabaseUrl: config.supabaseUrl,
+      redisUrl: config.redisUrl,
+    }, 'Starting API');
 
     // Warn about missing optional variables
     if (!config.solanaRpcUrl && config.nodeEnv === Environment.Production) {
-      console.warn(
-        '⚠️  SOLANA_RPC_URL not configured. Using default Solana RPC endpoint.',
-      );
+      logger.warn('SOLANA_RPC_URL not configured. Using default Solana RPC endpoint');
     }
 
     return config;
   } catch (error) {
-    console.error('❌ Environment validation failed:', error instanceof Error ? error.message : error);
+    logger.error({ error: error instanceof Error ? error.message : error }, 'Environment validation failed');
     throw error;
   }
 }

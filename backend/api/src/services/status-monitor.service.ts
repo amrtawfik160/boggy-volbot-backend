@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '../config/supabase';
 import { CampaignWebSocketGateway } from '../websocket/websocket.gateway';
+import { createLogger } from '../config/logger';
 
 /**
  * StatusMonitorService
@@ -16,18 +17,19 @@ import { CampaignWebSocketGateway } from '../websocket/websocket.gateway';
 export class StatusMonitorService implements OnModuleInit, OnModuleDestroy {
   private supabase: SupabaseClient;
   private subscription: any;
+  private logger = createLogger({ name: 'status-monitor' });
 
   constructor(private readonly gateway: CampaignWebSocketGateway) {
     this.supabase = supabaseAdmin;
   }
 
   async onModuleInit() {
-    console.log('[StatusMonitor] Initializing real-time subscription...');
+    this.logger.info('Initializing real-time subscription');
     this.startMonitoring();
   }
 
   async onModuleDestroy() {
-    console.log('[StatusMonitor] Cleaning up real-time subscription...');
+    this.logger.info('Cleaning up real-time subscription');
     if (this.subscription) {
       await this.supabase.removeChannel(this.subscription);
     }
@@ -54,13 +56,13 @@ export class StatusMonitorService implements OnModuleInit, OnModuleDestroy {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('[StatusMonitor] Successfully subscribed to campaign_runs updates');
+          this.logger.info('Successfully subscribed to campaign_runs updates');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('[StatusMonitor] Channel error, attempting to reconnect...');
+          this.logger.error('Channel error, attempting to reconnect');
           // Attempt to restart monitoring after a delay
           setTimeout(() => this.startMonitoring(), 5000);
         } else if (status === 'TIMED_OUT') {
-          console.error('[StatusMonitor] Subscription timed out, attempting to reconnect...');
+          this.logger.error('Subscription timed out, attempting to reconnect');
           setTimeout(() => this.startMonitoring(), 5000);
         }
       });
@@ -79,7 +81,7 @@ export class StatusMonitorService implements OnModuleInit, OnModuleDestroy {
 
       const { id: runId, campaign_id: campaignId, status, summary } = updatedRun;
 
-      console.log(`[StatusMonitor] Broadcasting status update for campaign ${campaignId} (run: ${runId})`);
+      this.logger.info({ campaignId, runId }, 'Broadcasting status update');
 
       // Broadcast the update via WebSocket
       this.gateway.emitToCampaign(campaignId, 'campaign:status', {
@@ -90,7 +92,7 @@ export class StatusMonitorService implements OnModuleInit, OnModuleDestroy {
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('[StatusMonitor] Error handling campaign run update:', error);
+      this.logger.error({ error }, 'Error handling campaign run update');
     }
   }
 
@@ -109,14 +111,14 @@ export class StatusMonitorService implements OnModuleInit, OnModuleDestroy {
         .limit(1);
 
       if (error || !runs || runs.length === 0) {
-        console.warn(`[StatusMonitor] No runs found for campaign ${campaignId}`);
+        this.logger.warn({ campaignId }, 'No runs found for campaign');
         return;
       }
 
       const run = runs[0];
 
       if (!run.summary) {
-        console.warn(`[StatusMonitor] No summary available for run ${run.id}`);
+        this.logger.warn({ campaignId, runId: run.id }, 'No summary available for run');
         return;
       }
 
@@ -129,9 +131,9 @@ export class StatusMonitorService implements OnModuleInit, OnModuleDestroy {
         updatedAt: new Date().toISOString(),
       });
 
-      console.log(`[StatusMonitor] Manually broadcasted status for campaign ${campaignId}`);
+      this.logger.info({ campaignId }, 'Manually broadcasted status');
     } catch (error) {
-      console.error(`[StatusMonitor] Error broadcasting status for campaign ${campaignId}:`, error);
+      this.logger.error({ campaignId, error }, 'Error broadcasting status');
     }
   }
 }

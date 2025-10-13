@@ -1,9 +1,12 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common'
 import { SupabaseAuthGuard } from './supabase-auth.guard'
 import { supabaseAdmin } from '../config/supabase'
+import { createLogger } from '../config/logger'
 
 @Injectable()
 export class AdminGuard extends SupabaseAuthGuard {
+    private logger = createLogger({ name: 'admin-guard' })
+
     async canActivate(context: ExecutionContext): Promise<boolean> {
         // First check authentication using parent guard
         const authenticated = await super.canActivate(context)
@@ -25,7 +28,7 @@ export class AdminGuard extends SupabaseAuthGuard {
                 .single()
 
             if (error) {
-                console.error('Error fetching user profile:', error)
+                this.logger.error({ userId: user.id, error }, 'Error fetching user profile')
                 throw new ForbiddenException('Unable to verify admin access')
             }
 
