@@ -1,14 +1,31 @@
 import { Controller, Get, Post, Param, Query, Body, UseGuards, Req, HttpException, HttpStatus } from '@nestjs/common'
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger'
 import { AdminGuard } from '../../../guards/admin.guard'
 import { SupabaseService } from '../../../services/supabase.service'
 import { Request } from 'express'
 
+@ApiTags('Admin Campaigns')
+@ApiBearerAuth('JWT-auth')
 @Controller('v1/admin/campaigns')
 @UseGuards(AdminGuard)
 export class CampaignsController {
     constructor(private readonly supabaseService: SupabaseService) {}
 
     @Get()
+    @ApiOperation({
+        summary: 'List all campaigns',
+        description: 'Retrieve paginated list of all campaigns with stats. Supports filtering by status and user. Requires admin role.',
+    })
+    @ApiQuery({ name: 'status', required: false, enum: ['draft', 'active', 'paused', 'stopped'], description: 'Filter by campaign status' })
+    @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
+    @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Items per page (max: 100, default: 20)' })
+    @ApiQuery({ name: 'sortBy', required: false, enum: ['created_at', 'updated_at', 'name'], description: 'Sort field (default: created_at)' })
+    @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'], description: 'Sort order (default: desc)' })
+    @ApiResponse({ status: 200, description: 'Campaigns retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid pagination parameters' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
     async getCampaigns(
         @Query('status') status?: string,
         @Query('userId') userId?: string,
@@ -97,6 +114,15 @@ export class CampaignsController {
     }
 
     @Get(':id')
+    @ApiOperation({
+        summary: 'Get campaign by ID',
+        description: 'Retrieve detailed information about a specific campaign including user, token, pool, runs, and statistics. Requires admin role.',
+    })
+    @ApiParam({ name: 'id', description: 'Campaign ID' })
+    @ApiResponse({ status: 200, description: 'Campaign retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
     async getCampaignById(@Param('id') id: string) {
         const campaign = await this.supabaseService.getAdminCampaignById(id)
 
@@ -138,6 +164,27 @@ export class CampaignsController {
     }
 
     @Post(':id/override')
+    @ApiOperation({
+        summary: 'Override campaign state',
+        description: 'Manually override campaign state with force actions (force_pause, force_stop, force_resume, reset). All actions are logged to audit trail. Requires admin role.',
+    })
+    @ApiParam({ name: 'id', description: 'Campaign ID' })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            required: ['action', 'reason'],
+            properties: {
+                action: { type: 'string', enum: ['force_pause', 'force_stop', 'force_resume', 'reset'], description: 'Override action to perform' },
+                reason: { type: 'string', description: 'Reason for override (required for audit trail)' },
+                notifyUser: { type: 'boolean', description: 'Whether to notify the campaign owner (optional)' },
+            },
+        },
+    })
+    @ApiResponse({ status: 200, description: 'Campaign override successful' })
+    @ApiResponse({ status: 400, description: 'Invalid action or missing reason' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
     async overrideCampaign(
         @Param('id') id: string,
         @Body() body: { action: 'force_pause' | 'force_stop' | 'force_resume' | 'reset'; reason: string; notifyUser?: boolean },

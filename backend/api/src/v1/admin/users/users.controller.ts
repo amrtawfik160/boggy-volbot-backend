@@ -1,14 +1,30 @@
 import { Controller, Get, Patch, Param, Query, Body, UseGuards, Req, HttpException, HttpStatus } from '@nestjs/common'
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger'
 import { AdminGuard } from '../../../guards/admin.guard'
 import { SupabaseService } from '../../../services/supabase.service'
 import { Request } from 'express'
 
+@ApiTags('Admin Users')
+@ApiBearerAuth('JWT-auth')
 @Controller('v1/admin/users')
 @UseGuards(AdminGuard)
 export class UsersController {
     constructor(private readonly supabaseService: SupabaseService) {}
 
     @Get()
+    @ApiOperation({
+        summary: 'List all users',
+        description: 'Retrieve paginated list of all users with stats. Supports filtering by role, status, and search. Requires admin role.',
+    })
+    @ApiQuery({ name: 'role', required: false, enum: ['user', 'admin'], description: 'Filter by user role' })
+    @ApiQuery({ name: 'status', required: false, enum: ['active', 'suspended'], description: 'Filter by user status' })
+    @ApiQuery({ name: 'search', required: false, description: 'Search by email or ID' })
+    @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Items per page (max: 100, default: 20)' })
+    @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid pagination parameters' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
     async getUsers(
         @Query('role') role?: string,
         @Query('status') status?: string,
@@ -78,6 +94,15 @@ export class UsersController {
     }
 
     @Get(':id')
+    @ApiOperation({
+        summary: 'Get user by ID',
+        description: 'Retrieve detailed information about a specific user including campaigns, wallets, stats, and activity. Requires admin role.',
+    })
+    @ApiParam({ name: 'id', description: 'User ID' })
+    @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'User not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
     async getUserById(@Param('id') id: string) {
         const user = await this.supabaseService.getAdminUserById(id)
 
@@ -106,6 +131,27 @@ export class UsersController {
     }
 
     @Patch(':id')
+    @ApiOperation({
+        summary: 'Update user role or status',
+        description: 'Update user role (user/admin) or status (active/suspended). All changes are logged to audit trail. Requires admin role.',
+    })
+    @ApiParam({ name: 'id', description: 'User ID' })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            required: ['reason'],
+            properties: {
+                role: { type: 'string', enum: ['user', 'admin'], description: 'New role (optional)' },
+                status: { type: 'string', enum: ['active', 'suspended'], description: 'New status (optional)' },
+                reason: { type: 'string', description: 'Reason for change (required for audit trail)' },
+            },
+        },
+    })
+    @ApiResponse({ status: 200, description: 'User updated successfully' })
+    @ApiResponse({ status: 400, description: 'Missing reason or no changes provided' })
+    @ApiResponse({ status: 404, description: 'User not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
     async updateUser(
         @Param('id') id: string,
         @Body() body: { role?: 'user' | 'admin'; status?: 'active' | 'suspended'; reason: string },
