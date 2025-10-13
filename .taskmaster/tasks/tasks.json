@@ -592,7 +592,63 @@
           1
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Admin API Endpoints and Access Control",
+            "description": "Define the structure, routes, request/response formats, and RBAC requirements for all admin endpoints.",
+            "dependencies": [],
+            "details": "List all required endpoints (metrics, campaigns, users, queue stats, manual override, system pause). Specify HTTP methods, input/output schemas, error codes, and RBAC rules for admin-only access. Ensure naming conventions and consistency with RESTful standards.\n<info added on 2025-10-13T17:08:58.546Z>\nCompleted design and documentation of all admin API endpoints, with a comprehensive specification available at backend/api/docs/ADMIN_API_SPEC.md. The specification details endpoints for system metrics, campaign management, user management, queue management, system control, and audit/logs, including HTTP methods, request/response schemas, error codes, and RBAC rules. All endpoints are protected by AdminGuard with admin role verification, audit logging, and enhanced rate limits. Security measures include JWT authentication, IP and user agent tracking, CORS restrictions, and TLS enforcement. TypeScript type definitions, pagination, filtering, and detailed metric structures are provided for all endpoints. The design adheres to RESTful conventions and integrates with SupabaseAuthGuard, BullMQ, Redis, and Supabase infrastructure.\n</info added on 2025-10-13T17:08:58.546Z>",
+            "status": "done",
+            "testStrategy": "Peer review of API design, validation against OpenAPI/Swagger spec."
+          },
+          {
+            "id": 2,
+            "title": "Implement Metrics and Queue Stats Endpoints",
+            "description": "Develop endpoints to expose system metrics and queue statistics for monitoring purposes.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create endpoints to return real-time system metrics (CPU, memory, etc.) and queue stats (job counts, statuses). Integrate with existing monitoring and queue systems. Ensure endpoints are protected by RBAC and return standardized JSON responses.",
+            "status": "pending",
+            "testStrategy": "Unit tests for endpoint logic, integration tests with monitoring/queue subsystems, RBAC access tests."
+          },
+          {
+            "id": 3,
+            "title": "Implement Campaign and User Management Endpoints",
+            "description": "Develop endpoints for listing, updating, and managing campaigns and users.",
+            "dependencies": [
+              1
+            ],
+            "details": "Add CRUD endpoints for campaigns and users, supporting listing, detail retrieval, updates, and status changes. Enforce RBAC for admin-only operations. Validate input and output formats, and handle errors with appropriate status codes.",
+            "status": "pending",
+            "testStrategy": "Unit tests for CRUD logic, integration tests with database, RBAC enforcement tests."
+          },
+          {
+            "id": 4,
+            "title": "Implement Manual Override and System Pause Endpoints",
+            "description": "Develop endpoints to allow manual override of system states and pausing/resuming system operations.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create endpoints for manual override actions (e.g., force job execution, reset states) and system-wide pause/resume controls. Ensure atomicity and safety of operations. Protect endpoints with RBAC and log all actions for audit.",
+            "status": "pending",
+            "testStrategy": "Unit tests for override/pause logic, integration tests for system state changes, audit log verification."
+          },
+          {
+            "id": 5,
+            "title": "Integrate RBAC Middleware and Document Admin API",
+            "description": "Integrate RBAC middleware for all admin endpoints and produce comprehensive API documentation.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Implement RBAC middleware to restrict access to admin endpoints. Generate and publish API documentation (OpenAPI/Swagger) detailing all endpoints, request/response formats, error codes, and RBAC requirements.",
+            "status": "pending",
+            "testStrategy": "Automated tests for RBAC enforcement, manual verification of documentation completeness and accuracy."
+          }
+        ]
       },
       {
         "id": 13,
@@ -1038,7 +1094,7 @@
         "dependencies": [
           2
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1102,7 +1158,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T16:59:42.807Z",
+      "updated": "2025-10-13T17:08:58.607Z",
       "description": "Tasks for master context"
     }
   }
