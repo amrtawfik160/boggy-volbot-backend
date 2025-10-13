@@ -620,8 +620,8 @@
             "dependencies": [
               1
             ],
-            "details": "Add CRUD endpoints for campaigns and users, supporting listing, detail retrieval, updates, and status changes. Enforce RBAC for admin-only operations. Validate input and output formats, and handle errors with appropriate status codes.",
-            "status": "in-progress",
+            "details": "Add CRUD endpoints for campaigns and users, supporting listing, detail retrieval, updates, and status changes. Enforce RBAC for admin-only operations. Validate input and output formats, and handle errors with appropriate status codes.\n<info added on 2025-10-13T17:31:20.292Z>\nImplementation completed for campaign and user management endpoints, including full CRUD operations, advanced filtering, pagination, sorting, and inline statistics. CampaignsController and UsersController provide detailed resource retrieval, manual override actions, and comprehensive error handling. All endpoints are protected by admin role verification and feature robust audit logging with before/after state capture, IP/user agent tracking, and required reasons for updates. SupabaseService enhanced with admin-specific queries and aggregation helpers. Extensive Vitest test suites cover all controller logic, validation, and error scenarios. AdminModule updated to register new controllers and dependencies. Endpoints conform to the API specification in backend/api/docs/ADMIN_API_SPEC.md and are ready for frontend integration.\n</info added on 2025-10-13T17:31:20.292Z>",
+            "status": "done",
             "testStrategy": "Unit tests for CRUD logic, integration tests with database, RBAC enforcement tests."
           },
           {
@@ -631,8 +631,8 @@
             "dependencies": [
               1
             ],
-            "details": "Create endpoints for manual override actions (e.g., force job execution, reset states) and system-wide pause/resume controls. Ensure atomicity and safety of operations. Protect endpoints with RBAC and log all actions for audit.",
-            "status": "pending",
+            "details": "Create endpoints for manual override actions (e.g., force job execution, reset states) and system-wide pause/resume controls. Ensure atomicity and safety of operations. Protect endpoints with RBAC and log all actions for audit.\n<info added on 2025-10-13T17:36:38.614Z>\nImplementation completed successfully.\n\nCreated SystemControlService to manage system-wide pause/resume for all BullMQ queues (gather, trade.buy, trade.sell, distribute, funds.gather), storing pause state in Redis with admin tracking and providing comprehensive health checks for API, database, Redis, queues, RPC, and workers.\n\nCreated OverrideService for manual campaign override actions (force_pause, force_stop, force_resume, reset), validating actions against campaign state and tracking all overrides with full audit logging.\n\nAdded SystemControlController with the following endpoints:\n- POST /v1/admin/system/pause: Emergency pause all operations with reason tracking\n- POST /v1/admin/system/resume: Resume all operations\n- GET /v1/admin/system/health: Comprehensive health check\n- GET /v1/admin/system/status: Current pause state and health status\n\nConfirmed that CampaignsController already implements POST /v1/admin/campaigns/:id/override for campaign overrides.\n\nAll endpoints are protected by AdminGuard with admin role verification, and all actions are logged to the audit_logs table with admin_id, action, reason, metadata, IP address, and user agent.\n\nAdminModule updated to register SystemControlController and both new services.\n\nComprehensive Vitest test suites created:\n- SystemControlService: 18 test cases (pause/resume, state management, health checks, error handling)\n- OverrideService: 19 test cases (override actions, validation, audit history, error handling)\n- SystemControlController: 10 test cases (endpoints, audit logging, request tracking)\n\nAll implementations conform to backend/api/docs/ADMIN_API_SPEC.md and integrate with Supabase, BullMQ, and Redis.\n</info added on 2025-10-13T17:36:38.614Z>",
+            "status": "in-progress",
             "testStrategy": "Unit tests for override/pause logic, integration tests for system state changes, audit log verification."
           },
           {
@@ -1158,7 +1158,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T17:25:42.538Z",
+      "updated": "2025-10-13T17:32:05.000Z",
       "description": "Tasks for master context"
     }
   }
