@@ -19,9 +19,12 @@ import { RedisThrottlerStorage } from './throttler/redis-throttler-storage'
 import { GeneralThrottlerGuard } from './guards/general-throttler.guard'
 import { AdminModule } from './v1/admin/admin.module'
 import { RequestContextMiddleware } from './middleware/request-context.middleware'
+import { MetricsMiddleware } from './middleware/metrics.middleware'
+import { MetricsModule } from './metrics/metrics.module'
 
 @Module({
     imports: [
+        MetricsModule,
         WebSocketModule,
         AdminModule,
         ThrottlerModule.forRoot({
@@ -61,6 +64,6 @@ import { RequestContextMiddleware } from './middleware/request-context.middlewar
 })
 export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
-        consumer.apply(RequestContextMiddleware).forRoutes('*');
+        consumer.apply(RequestContextMiddleware, MetricsMiddleware).forRoutes('*');
     }
 }

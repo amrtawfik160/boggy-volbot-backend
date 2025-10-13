@@ -750,7 +750,64 @@
           14
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Expose Metrics Endpoints for Prometheus and CloudWatch",
+            "description": "Implement and expose HTTP endpoints that provide application metrics in Prometheus format, and configure CloudWatch integration if required.",
+            "dependencies": [],
+            "details": "Add a /metrics endpoint to the API using a Prometheus client library (e.g., prom-client for Node.js). Ensure the endpoint exposes queue depths, job rates, RPC stats, and API latency. If using AWS, configure the CloudWatch agent to scrape Prometheus metrics or set up a Prometheus-to-CloudWatch exporter as needed[1][3][4].\n<info added on 2025-10-13T18:33:30.948Z>\nCompleted implementation of Prometheus metrics endpoint:\n\nInstalled prom-client (v15.1.3) for Node.js Prometheus metrics.\nCreated MetricsService with comprehensive metrics tracking, including:\n- Queue metrics: depth gauge, jobs processed/failed counters, job processing duration histogram\n- RPC metrics: request counters, error counters, latency histogram\n- API metrics: HTTP request counters, request duration histogram, active connections gauge\n- Campaign metrics: active campaigns gauge, transactions counter\n- Default system metrics: CPU, memory, event loop, heap, etc., all prefixed with volume_bot_\nCreated MetricsController with GET /metrics endpoint that returns Prometheus-formatted metrics.\nCreated MetricsMiddleware to automatically track HTTP request metrics (latency, counts, status codes).\nIntegrated MetricsModule into AppModule as a global module for easy access across the app.\nCreated and successfully tested metrics output, verifying all custom metrics export correctly.\n\nFiles created:\n- /backend/api/src/metrics/metrics.service.ts\n- /backend/api/src/metrics/metrics.controller.ts\n- /backend/api/src/metrics/metrics.module.ts\n- /backend/api/src/middleware/metrics.middleware.ts\n- /backend/api/src/metrics/test-metrics.ts (test script)\n\nTesting:\nRan test script that successfully outputs all metrics in Prometheus format. Metrics are properly labeled and include histograms with appropriate buckets for latency tracking.\n\nThe /metrics endpoint is now available and ready for Prometheus scraping. Next step is to instrument the actual application code to track real metrics.\n</info added on 2025-10-13T18:33:30.948Z>",
+            "status": "done",
+            "testStrategy": "Use curl or Prometheus to scrape the /metrics endpoint and verify all required metrics are present. For CloudWatch, confirm metrics appear in the AWS console."
+          },
+          {
+            "id": 2,
+            "title": "Instrument Application Code to Track Key Metrics",
+            "description": "Add instrumentation to application logic to record queue depths, job rates, RPC statistics, and API latency.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use Prometheus client APIs to increment counters, record histograms, and gauge values at appropriate points in the codebase. Ensure all required metrics are updated in real time and reflect actual system state.",
+            "status": "pending",
+            "testStrategy": "Simulate jobs, RPCs, and API calls; verify metrics update as expected via the /metrics endpoint."
+          },
+          {
+            "id": 3,
+            "title": "Integrate Sentry v7+ for Error Tracking",
+            "description": "Set up Sentry v7+ SDK in the application to capture and report errors and exceptions.",
+            "dependencies": [],
+            "details": "Install and configure the Sentry SDK with the project DSN. Ensure uncaught exceptions, handled errors, and relevant context (user, request, tags) are sent to Sentry. Test with both manual and automatic error reporting.",
+            "status": "pending",
+            "testStrategy": "Trigger known errors and verify they appear in the Sentry dashboard with correct metadata."
+          },
+          {
+            "id": 4,
+            "title": "Optionally Integrate OpenTelemetry for Distributed Tracing",
+            "description": "Add OpenTelemetry SDK to enable distributed tracing across services, if required.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Install OpenTelemetry libraries and configure exporters (e.g., OTLP, Jaeger, or Sentry). Instrument key code paths (API entrypoints, RPC calls, job processing) for trace propagation and span creation.",
+            "status": "pending",
+            "testStrategy": "Run end-to-end requests and verify traces are visible in the configured tracing backend, with correct parent-child relationships."
+          },
+          {
+            "id": 5,
+            "title": "Document Metrics, Tracing, and Error Reporting Setup",
+            "description": "Write comprehensive documentation for metrics endpoints, tracked metrics, Sentry integration, and tracing setup.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Document the /metrics endpoint, list all exported metrics with descriptions, explain Sentry configuration and error reporting, and describe tracing setup and usage. Include instructions for local testing and production monitoring.",
+            "status": "pending",
+            "testStrategy": "Peer review documentation for completeness and accuracy; verify all steps can be followed by a new team member."
+          }
+        ]
       },
       {
         "id": 16,
@@ -1218,7 +1275,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T18:28:27.843Z",
+      "updated": "2025-10-13T18:33:37.183Z",
       "description": "Tasks for master context"
     }
   }
