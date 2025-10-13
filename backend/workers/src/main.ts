@@ -14,6 +14,10 @@ import {
 } from './workers';
 import { createLogger } from './config/logger';
 import { MetricsService } from './services/metrics.service';
+import { SentryService } from './services/sentry.service';
+
+// Initialize Sentry early to catch all errors
+SentryService.initialize();
 
 // Initialize structured logger
 const logger = createLogger({
@@ -172,6 +176,15 @@ workers.forEach((worker) => {
       error: err.message,
       stack: err.stack,
     }, 'Worker job failed');
+
+    // Send to Sentry with job context
+    SentryService.captureException(err, {
+      worker: {
+        name: workerInstance.name,
+        jobId: job?.id,
+        jobData: job?.data,
+      },
+    });
   });
 
   workerInstance.on('error', (err) => {
@@ -180,6 +193,13 @@ workers.forEach((worker) => {
       error: err.message,
       stack: err.stack,
     }, 'Worker error');
+
+    // Send to Sentry
+    SentryService.captureException(err, {
+      worker: {
+        name: workerInstance.name,
+      },
+    });
   });
 });
 
@@ -198,6 +218,9 @@ const shutdown = async () => {
   await tradeSellQueue.close();
   await statusQueue.close();
   await redisConnection.quit();
+
+  // Close Sentry
+  await SentryService.close();
 
   logger.info('All workers closed gracefully');
   process.exit(0);

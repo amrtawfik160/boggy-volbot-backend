@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import * as Sentry from '@sentry/node';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -7,6 +8,18 @@ import { validateEnvironmentConfig } from './config/environment';
 import { createLogger } from './config/logger';
 
 async function bootstrap() {
+  // Initialize Sentry early to catch all errors
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
+      tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+      integrations: [
+        ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
+      ],
+    });
+  }
+
   // Initialize structured logger
   const logger = createLogger({
     name: 'api',
@@ -90,6 +103,15 @@ async function bootstrap() {
 bootstrap().catch((err) => {
   const errorLogger = createLogger({ name: 'api', level: 'error' });
   errorLogger.error({ error: err.message, stack: err.stack }, 'API bootstrap failed');
-  process.exit(1);
+
+  // Send critical bootstrap error to Sentry
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+    Sentry.close(2000).then(() => {
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
 });
 

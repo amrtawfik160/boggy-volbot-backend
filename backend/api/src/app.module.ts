@@ -21,9 +21,11 @@ import { AdminModule } from './v1/admin/admin.module'
 import { RequestContextMiddleware } from './middleware/request-context.middleware'
 import { MetricsMiddleware } from './middleware/metrics.middleware'
 import { MetricsModule } from './metrics/metrics.module'
+import { SentryModule } from './sentry/sentry.module'
 
 @Module({
     imports: [
+        SentryModule,
         MetricsModule,
         WebSocketModule,
         AdminModule,
