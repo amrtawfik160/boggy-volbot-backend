@@ -17,7 +17,14 @@
         "test:coverage": "vitest run --coverage",
         "generate-master-key": "ts-node scripts/generate-master-key.ts",
         "rotate-master-key": "ts-node scripts/rotate-master-key.ts",
-        "verify-deks": "ts-node scripts/verify-deks.ts"
+        "verify-deks": "ts-node scripts/verify-deks.ts",
+        "migrate": "node-pg-migrate",
+        "migrate:up": "node-pg-migrate up",
+        "migrate:down": "node-pg-migrate down",
+        "migrate:create": "node-pg-migrate create",
+        "migrate:redo": "node-pg-migrate redo",
+        "migrate:status": "node-pg-migrate status",
+        "db:seed": "ts-node scripts/seed.ts"
     },
     "dependencies": {
         "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
@@ -44,8 +51,10 @@
     "devDependencies": {
         "@nestjs/testing": "^10.4.20",
         "@types/node": "^24.3.0",
+        "@types/node-pg-migrate": "^2.3.1",
         "@vitest/coverage-v8": "^2.1.8",
         "eslint": "^9.16.0",
+        "node-pg-migrate": "^8.0.3",
         "prettier": "^3.6.2",
         "ts-node": "^10.9.2",
         "ts-node-dev": "^2.0.0",

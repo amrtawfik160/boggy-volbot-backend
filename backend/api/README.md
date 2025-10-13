@@ -44,19 +44,41 @@ JITO_TIP_AMOUNT=0.001
 
 ## Database Setup
 
-1. Run the SQL schema in your Supabase project:
-   ```bash
-   # Copy SQL from backend/database-schema.sql
-   # Paste into Supabase SQL Editor
-   ```
+The project uses **node-pg-migrate** for database migrations with version control and rollback support.
 
-2. The schema includes:
-   - User profiles and authentication
-   - Wallets, tokens, and pools
-   - Campaigns and runs
-   - Jobs and executions
-   - Webhooks and audit logs
-   - Row Level Security (RLS) policies
+### Quick Start
+
+```bash
+# Set DATABASE_URL environment variable
+export DATABASE_URL=postgresql://user:password@host:port/database
+
+# Run all pending migrations
+npm run migrate:up
+
+# (Optional) Seed development data
+npm run db:seed
+```
+
+### Available Migration Commands
+
+- `npm run migrate:up` - Run all pending migrations
+- `npm run migrate:down` - Rollback last migration
+- `npm run migrate:create <name>` - Create a new migration
+- `npm run migrate:status` - Check migration status
+- `npm run migrate:redo` - Redo last migration (down then up)
+- `npm run db:seed` - Seed development data
+
+### Schema Includes
+
+- User encryption keys (per-user DEKs)
+- User profiles and authentication
+- Wallets, tokens, and pools
+- Campaigns and runs
+- Jobs and executions
+- Webhooks and audit logs
+- Row Level Security (RLS) policies
+
+📚 **For detailed migration guide, see [docs/DATABASE_MIGRATIONS.md](./docs/DATABASE_MIGRATIONS.md)**
 
 ## Development
 
@@ -72,14 +94,37 @@ The API will be available at `http://localhost:3001`
 
 ## Available Scripts
 
+### Development
+
 - `npm run dev` - Start development server with hot reload
 - `npm run build` - Build for production
 - `npm start` - Start production server
+
+### Testing
+
 - `npm test` - Run tests
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Run tests with coverage
+
+### Code Quality
+
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
+- `npm run type-check` - Check TypeScript types
+
+### Database
+
+- `npm run migrate:up` - Run pending migrations
+- `npm run migrate:down` - Rollback last migration
+- `npm run migrate:create <name>` - Create new migration
+- `npm run migrate:status` - Check migration status
+- `npm run db:seed` - Seed development data
+
+### Security
+
+- `npm run generate-master-key` - Generate encryption master key
+- `npm run rotate-master-key` - Rotate master encryption key
+- `npm run verify-deks` - Verify data encryption keys
 
 ## API Endpoints
 
