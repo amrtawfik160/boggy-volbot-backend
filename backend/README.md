@@ -162,12 +162,22 @@ WORKER_CONCURRENCY=10
 
 ## Monitoring
 
-Key metrics exposed:
+The Volume Bot backend includes comprehensive monitoring and observability:
+
+- **Prometheus Metrics**: Real-time performance monitoring at `/metrics` endpoint
+- **Sentry Error Tracking**: Comprehensive error capture and debugging
+- **OpenTelemetry Tracing**: Distributed tracing across services
+
+**📖 See [MONITORING.md](./MONITORING.md) for complete setup and usage guide**
+
+Key metrics tracked:
 
 - Queue depth and processing rate
 - API request latency (P50, P95, P99)
 - Transaction success/failure rates
 - RPC endpoint health
+- Active campaigns and transaction counts
+- System resources (CPU, memory, event loop)
 
 ## Troubleshooting
 

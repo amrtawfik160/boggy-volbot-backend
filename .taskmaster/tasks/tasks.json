@@ -803,8 +803,8 @@
               3,
               4
             ],
-            "details": "Document the /metrics endpoint, list all exported metrics with descriptions, explain Sentry configuration and error reporting, and describe tracing setup and usage. Include instructions for local testing and production monitoring.",
-            "status": "pending",
+            "details": "Document the /metrics endpoint, list all exported metrics with descriptions, explain Sentry configuration and error reporting, and describe tracing setup and usage. Include instructions for local testing and production monitoring.\n<info added on 2025-10-13T19:05:02.064Z>\nComprehensive monitoring and observability documentation has been created at backend/MONITORING.md, consolidating Prometheus, Sentry, and OpenTelemetry systems. The guide includes an overview and architecture diagram, quick start instructions for local development, detailed documentation for each monitoring system, a full metrics reference table, example Prometheus queries and alerting rules, Sentry integration and test endpoints, OpenTelemetry tracing usage patterns, environment variable reference, local and production setup instructions, deployment checklists, Kubernetes and AWS CloudWatch integration examples, troubleshooting guidance, and best practices. The backend/README.md has also been updated to reference this new documentation.\n</info added on 2025-10-13T19:05:02.064Z>",
+            "status": "done",
             "testStrategy": "Peer review documentation for completeness and accuracy; verify all steps can be followed by a new team member."
           }
         ]
@@ -1275,7 +1275,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T19:00:24.635Z",
+      "updated": "2025-10-13T19:05:09.623Z",
       "description": "Tasks for master context"
     }
   }
