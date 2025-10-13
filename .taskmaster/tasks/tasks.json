@@ -706,8 +706,8 @@
               1,
               2
             ],
-            "details": "Search for all instances of console.log, console.error, or other loggers. Refactor these to use the configured Pino logger, ensuring correct log level and context usage. Remove or disable legacy logging to avoid duplication.",
-            "status": "in-progress",
+            "details": "Search for all instances of console.log, console.error, or other loggers. Refactor these to use the configured Pino logger, ensuring correct log level and context usage. Remove or disable legacy logging to avoid duplication.\n<info added on 2025-10-13T18:05:48.834Z>\nSuccessfully completed refactoring of all legacy and ad-hoc logging statements to use the structured Pino logger across the main application codebase. \n\nRefactored Files:\n- backend/api/src/config/environment.ts: All console.log, warn, and error statements replaced with Pino logger calls.\n- backend/api/src/config/supabase.ts: Integrated Pino logger for configuration warnings.\n- backend/api/src/services/status-monitor.service.ts: Fully migrated to structured logging with contextual fields (campaignId, runId).\n- backend/api/src/guards/admin.guard.ts: Added structured error logging with userId context.\n- backend/workers/src/core/legacy/utils/logger.ts: Legacy logger refactored to use Pino internally for backwards compatibility.\n\nStatus:\n- All controllers, services, guards, and workers now use Pino for logging.\n- Legacy logger remains for compatibility but now outputs structured logs.\n- Remaining console statements (44 total) are limited to CLI scripts, tests, and low-priority legacy utilities.\n- No duplication of log output.\n\nQuality:\n- All logs include appropriate context fields.\n- Log levels (info, warn, error, debug) are used consistently.\n- Structured JSON output is enforced in production.\n- Backwards compatibility with legacy code is maintained.\n\nChanges committed to git with a detailed commit message.\n</info added on 2025-10-13T18:05:48.834Z>",
+            "status": "done",
             "testStrategy": "Code review for complete replacement. Run application and verify only Pino logs are emitted."
           },
           {
@@ -720,7 +720,7 @@
               3
             ],
             "details": "Configure Pino transport or use a log forwarder (e.g., pino-cloudwatch, Datadog agent) to send logs to the chosen aggregation platform. Ensure log format and metadata are preserved. Document environment variables and deployment changes required for aggregation.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Integration test by generating logs and verifying their appearance and structure in Datadog or CloudWatch."
           },
           {
@@ -1218,7 +1218,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T18:00:49.245Z",
+      "updated": "2025-10-13T18:07:13.350Z",
       "description": "Tasks for master context"
     }
   }

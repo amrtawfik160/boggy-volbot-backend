@@ -45,6 +45,7 @@
         "class-validator": "^0.14.1",
         "ioredis": "^5.4.2",
         "jito-ts": "^3.0.1",
+        "pino-cloudwatch": "^0.7.0",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.2",
         "socket.io": "^4.8.1",

@@ -40,6 +40,14 @@ export interface EnvironmentConfig {
   buyLowerAmount?: number;
   buyUpperAmount?: number;
   distributeWalletNum?: number;
+
+  // Logging (Optional - for CloudWatch integration)
+  logLevel?: string;
+  cloudwatchLogGroup?: string;
+  cloudwatchLogStream?: string;
+  awsRegion?: string;
+  awsAccessKeyId?: string;
+  awsSecretAccessKey?: string;
 }
 
 /**
@@ -123,6 +131,14 @@ export function loadEnvironmentConfig(): EnvironmentConfig {
     distributeWalletNum: process.env.DISTRIBUTE_WALLET_NUM
       ? Number(process.env.DISTRIBUTE_WALLET_NUM)
       : undefined,
+
+    // Logging configuration
+    logLevel: process.env.LOG_LEVEL,
+    cloudwatchLogGroup: process.env.CLOUDWATCH_LOG_GROUP,
+    cloudwatchLogStream: process.env.CLOUDWATCH_LOG_STREAM,
+    awsRegion: process.env.AWS_REGION,
+    awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   };
 }
 
