@@ -703,8 +703,8 @@
               2,
               3
             ],
-            "details": "Implement buttons/switches for manual overrides (e.g., pause/resume services) with confirmation dialogs. Build a searchable, paginated audit log viewer that fetches and displays admin actions from the backend.",
-            "status": "in-progress",
+            "details": "Implement buttons/switches for manual overrides (e.g., pause/resume services) with confirmation dialogs. Build a searchable, paginated audit log viewer that fetches and displays admin actions from the backend.\n<info added on 2025-10-13T20:16:00.851Z>\nImplementation Plan for Manual Override Controls and Audit Log Viewer:\n\n1. File Structure:\n   - Create /admin-dashboard/system/page.tsx for system controls and settings.\n   - Create /components/admin/ManualOverridePanel.tsx for override controls.\n   - Create /components/admin/AuditLogViewer.tsx for the audit log table.\n   - Create /components/admin/ConfirmDialog.tsx for confirmation modals.\n\n2. Manual Override Controls:\n   - Implement buttons/switches for:\n     - Pause/Resume all campaigns\n     - Enable/Disable new user registrations\n     - Enable/Disable API access\n     - Toggle system maintenance mode\n   - Each control should trigger a confirmation dialog before executing the action.\n\n3. Audit Log Viewer:\n   - Display admin actions from the audit_logs table.\n   - Features:\n     - Filter by user, action, and entity\n     - Search functionality\n     - Date range filter\n     - Paginated results\n     - Export audit logs (e.g., CSV)\n\n4. Backend Integration:\n   - Fetch audit log data from the existing audit_logs table (lines 98-107 in database-schema.sql).\n   - Ensure all override actions are logged to audit_logs for traceability.\n\n5. UI/UX:\n   - Use Chakra UI or MUI components for consistent styling.\n   - Ensure responsive design and accessibility for all controls and tables.\n</info added on 2025-10-13T20:16:00.851Z>",
+            "status": "done",
             "testStrategy": "Test manual override controls for correct API calls and UI feedback. Verify audit log viewer displays accurate, filterable data and updates after actions."
           },
           {
@@ -717,7 +717,7 @@
               4
             ],
             "details": "Wire up all components to their respective API endpoints using Axios or Fetch. Refine layout and styling for consistency using Chakra UI/MUI. Conduct accessibility and responsiveness reviews, and address any UI/UX issues.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "End-to-end tests for all dashboard flows, manual UI/UX review, and accessibility testing using tools like axe-core."
           }
         ]
@@ -1446,7 +1446,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T20:15:26.665Z",
+      "updated": "2025-10-13T20:17:40.475Z",
       "description": "Tasks for master context"
     }
   }
