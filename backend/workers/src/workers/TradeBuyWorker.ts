@@ -42,6 +42,8 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
   ): Promise<TradeBuyJobResult> {
     const { runId, campaignId, walletId, amount } = data;
 
+    context.logger.info({ amount, walletId }, 'Starting buy execution');
+
     await context.updateProgress(10, 'Fetching campaign details');
 
     // Get campaign details
@@ -52,8 +54,11 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
       .single();
 
     if (campaignError || !campaign) {
+      context.logger.error({ error: campaignError?.message }, 'Campaign not found');
       throw new Error(`Campaign not found: ${campaignId}. Error: ${campaignError?.message}`);
     }
+
+    context.logger.debug({ tokenMint: campaign.tokens.mint, poolId: campaign.pool_id }, 'Campaign details fetched');
 
     await context.updateProgress(20, 'Fetching wallet');
 
@@ -65,8 +70,11 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
       .single();
 
     if (walletError || !wallet || !wallet.encrypted_private_key) {
+      context.logger.error({ error: walletError?.message }, 'Wallet not found or missing private key');
       throw new Error(`Wallet not found or has no private key: ${walletId}. Error: ${walletError?.message}`);
     }
+
+    context.logger.debug({ walletAddress: wallet.public_key }, 'Wallet fetched');
 
     await context.updateProgress(30, 'Decrypting wallet');
 
@@ -130,8 +138,11 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
     );
 
     if (!result.success) {
+      context.logger.error({ error: result.error }, 'Buy transaction failed');
       throw new Error(result.error || 'Buy transaction failed');
     }
+
+    context.logger.info({ signature: result.signature, useJito }, 'Buy transaction successful');
 
     await context.updateProgress(80, 'Checking idempotency');
 
@@ -139,6 +150,7 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
     if (result.signature) {
       const alreadyProcessed = await context.checkIdempotency(result.signature);
       if (alreadyProcessed) {
+        context.logger.warn('Transaction already processed, skipping');
         return { success: true, signature: result.signature };
       }
     }
@@ -159,6 +171,7 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
 
     await context.updateProgress(100, 'Buy transaction completed');
 
+    context.logger.info('Buy execution completed successfully');
     return { success: true, signature: result.signature };
   }
 }

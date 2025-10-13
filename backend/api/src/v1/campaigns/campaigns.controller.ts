@@ -1,12 +1,15 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus, ValidationPipe } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus, ValidationPipe, Req } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard'
 import { CurrentUser } from '../../decorators/user.decorator'
+import { RequestId } from '../../decorators/request-id.decorator'
 import { SupabaseService } from '../../services/supabase.service'
 import { CampaignWebSocketGateway } from '../../websocket/websocket.gateway'
 import { Queue } from 'bullmq'
 import IORedis from 'ioredis'
 import { CreateCampaignDto, UpdateCampaignDto, DistributeDto, SellOnlyDto } from './dto'
+import { createLogger, createChildLogger } from '../../config/logger'
+import type { Request } from 'express'
 
 @Controller('campaigns')
 @UseGuards(SupabaseAuthGuard)
@@ -16,6 +19,7 @@ export class CampaignsController {
     private tradeSellQueue: Queue
     private distributeQueue: Queue
     private fundsGatherQueue: Queue
+    private logger = createLogger({ name: 'campaigns-controller' })
 
     constructor(
         private readonly supabase: SupabaseService,
@@ -68,20 +72,27 @@ export class CampaignsController {
 
     @Post(':id/start')
     @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
-    async startCampaign(@Param('id') id: string, @CurrentUser() user: any) {
+    async startCampaign(@Param('id') id: string, @CurrentUser() user: any, @RequestId() requestId: string) {
+        const contextLogger = createChildLogger(this.logger, { userId: user.id, campaignId: id, requestId });
+
+        contextLogger.info('Starting campaign');
+
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
+            contextLogger.warn('Campaign not found');
             throw new HttpException('Campaign not found', HttpStatus.NOT_FOUND)
         }
 
         // Update campaign status
         await this.supabase.updateCampaign(id, user.id, { status: 'active' })
+        contextLogger.info('Campaign status updated to active');
 
         // Create campaign run
         const run = await this.supabase.createCampaignRun({
             campaign_id: id,
             status: 'running',
         })
+        contextLogger.info({ runId: run.id }, 'Campaign run created');
 
         // Emit run status event
         this.gateway.emitRunStatus({
@@ -119,9 +130,11 @@ export class CampaignsController {
             poolId: campaign.pool_id,
             dbJobId: dbJob.id,
         })
+        contextLogger.info({ jobId: dbJob.id }, 'Gather job enqueued');
 
         // Bootstrap initial buy/sell for user's active wallets
         const wallets = await this.supabase.getWalletsByUserId(user.id)
+        contextLogger.info({ walletCount: wallets.length }, 'Fetched user wallets');
 
         // Load per-user settings with defaults
         const settings = await this.supabase.getUserSettings(user.id)

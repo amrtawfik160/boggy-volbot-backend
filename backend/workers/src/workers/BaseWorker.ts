@@ -1,6 +1,8 @@
 import { Worker, Job, WorkerOptions, Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createLogger, createChildLogger } from '../config/logger';
+import type pino from 'pino';
 
 export interface BaseWorkerConfig {
   queueName: string;
@@ -15,6 +17,7 @@ export interface BaseWorkerConfig {
 export interface JobContext {
   job: Job;
   supabase: SupabaseClient;
+  logger: pino.Logger;
   updateProgress: (progress: number, message?: string) => Promise<void>;
   checkIdempotency: (signature: string) => Promise<boolean>;
   markProcessed: (signature: string) => Promise<void>;
@@ -24,10 +27,12 @@ export abstract class BaseWorker<T = any, R = any> {
   protected worker: Worker;
   protected config: BaseWorkerConfig;
   protected deadLetterQueue?: Queue;
+  protected logger: pino.Logger;
   private processedSignatures: Set<string> = new Set();
 
   constructor(config: BaseWorkerConfig) {
     this.config = config;
+    this.logger = createLogger({ name: config.queueName });
 
     // Initialize dead-letter queue if enabled
     if (config.enableDeadLetterQueue) {
@@ -64,7 +69,11 @@ export abstract class BaseWorker<T = any, R = any> {
 
   private setupEventHandlers(): void {
     this.worker.on('completed', async (job: Job) => {
-      console.log(`[${this.config.queueName.toUpperCase()}] Job ${job.id} completed successfully`);
+      const context: any = { jobId: job.id };
+      if ((job.data as any)?.campaignId) context.campaignId = (job.data as any).campaignId;
+      if ((job.data as any)?.dbJobId) context.dbJobId = (job.data as any).dbJobId;
+
+      this.logger.info(context, 'Job completed successfully');
 
       // Update database job status if dbJobId is provided
       if ((job.data as any)?.dbJobId) {
@@ -78,7 +87,11 @@ export abstract class BaseWorker<T = any, R = any> {
     this.worker.on('failed', async (job: Job | undefined, error: Error) => {
       if (!job) return;
 
-      console.error(`[${this.config.queueName.toUpperCase()}] Job ${job.id} failed:`, error);
+      const context: any = { jobId: job.id, error: error.message };
+      if ((job.data as any)?.campaignId) context.campaignId = (job.data as any).campaignId;
+      if ((job.data as any)?.dbJobId) context.dbJobId = (job.data as any).dbJobId;
+
+      this.logger.error(context, 'Job failed');
 
       // Update database job status
       if ((job.data as any)?.dbJobId) {
@@ -109,21 +122,32 @@ export abstract class BaseWorker<T = any, R = any> {
     });
 
     this.worker.on('progress', (job: Job, progress: any) => {
-      console.log(`[${this.config.queueName.toUpperCase()}] Job ${job.id} progress:`, progress);
+      const context: any = { jobId: job.id, progress };
+      if ((job.data as any)?.campaignId) context.campaignId = (job.data as any).campaignId;
+
+      this.logger.debug(context, 'Job progress update');
     });
 
     this.worker.on('error', (error: Error) => {
-      console.error(`[${this.config.queueName.toUpperCase()}] Worker error:`, error);
+      this.logger.error({ error: error.message, stack: error.stack }, 'Worker error');
     });
   }
 
   private async processJob(job: Job<T>): Promise<R> {
-    console.log(`[${this.config.queueName.toUpperCase()}] Processing job ${job.id}`, job.data);
+    // Create contextual logger with job context
+    const logContext: any = { jobId: job.id };
+    if ((job.data as any)?.campaignId) logContext.campaignId = (job.data as any).campaignId;
+    if ((job.data as any)?.walletId) logContext.walletId = (job.data as any).walletId;
+    if ((job.data as any)?.dbJobId) logContext.dbJobId = (job.data as any).dbJobId;
+
+    const contextLogger = createChildLogger(this.logger, logContext);
+    contextLogger.info('Processing job');
 
     // Create job context with helper methods
     const context: JobContext = {
       job,
       supabase: this.config.supabase,
+      logger: contextLogger,
 
       updateProgress: async (progress: number, message?: string) => {
         await job.updateProgress({ progress, message, timestamp: Date.now() });
@@ -145,7 +169,7 @@ export abstract class BaseWorker<T = any, R = any> {
 
         // Check in-memory cache first
         if (this.processedSignatures.has(signature)) {
-          console.log(`[${this.config.queueName.toUpperCase()}] Signature already processed (cache): ${signature}`);
+          contextLogger.debug({ signature }, 'Signature already processed (cache)');
           return true;
         }
 
@@ -157,7 +181,7 @@ export abstract class BaseWorker<T = any, R = any> {
           .single();
 
         if (execution) {
-          console.log(`[${this.config.queueName.toUpperCase()}] Signature already processed (db): ${signature}`);
+          contextLogger.debug({ signature }, 'Signature already processed (database)');
           this.processedSignatures.add(signature);
           return true;
         }
@@ -183,9 +207,10 @@ export abstract class BaseWorker<T = any, R = any> {
       // Execute the worker's specific logic
       const result = await this.execute(job.data, context);
 
+      contextLogger.info('Job execution completed');
       return result;
     } catch (error: any) {
-      console.error(`[${this.config.queueName.toUpperCase()}] Job ${job.id} execution error:`, error);
+      contextLogger.error({ error: error.message, stack: error.stack }, 'Job execution error');
       throw error; // Re-throw to trigger retry logic
     }
   }

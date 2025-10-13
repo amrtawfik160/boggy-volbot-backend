@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common'
 import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { HealthController } from './health/health.controller'
@@ -18,6 +18,7 @@ import { WebSocketModule } from './websocket/websocket.module'
 import { RedisThrottlerStorage } from './throttler/redis-throttler-storage'
 import { GeneralThrottlerGuard } from './guards/general-throttler.guard'
 import { AdminModule } from './v1/admin/admin.module'
+import { RequestContextMiddleware } from './middleware/request-context.middleware'
 
 @Module({
     imports: [
@@ -58,4 +59,8 @@ import { AdminModule } from './v1/admin/admin.module'
         },
     ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(RequestContextMiddleware).forRoutes('*');
+    }
+}
