@@ -680,8 +680,8 @@
             "dependencies": [
               1
             ],
-            "details": "Design and implement widgets for system uptime, API status, error rates, and resource usage using Chakra UI or MUI. Integrate with backend APIs to fetch and display live health data. Use charting libraries for visualizations.",
-            "status": "in-progress",
+            "details": "Design and implement widgets for system uptime, API status, error rates, and resource usage using Chakra UI or MUI. Integrate with backend APIs to fetch and display live health data. Use charting libraries for visualizations.\n<info added on 2025-10-13T20:11:22.382Z>\nImplementation Plan:\n\n- System health widgets will display API health status (including backend API and worker status), system uptime, active campaigns count, total users count, error rate (last 24h), and resource usage metrics.\n- MetricCard component from the dashboard folder will be used for displaying metrics, with ApexCharts (already included in package.json) for visualizations.\n- A responsive, mobile-first grid layout will be implemented.\n- The following new components will be created: /frontend/components/admin/SystemHealthWidget.tsx, /frontend/components/admin/MetricsChart.tsx, and /frontend/components/admin/StatusIndicator.tsx.\n- The admin-dashboard/page.tsx will be updated to use these real components.\n- All widgets will integrate with backend APIs to fetch and display live health data.\n</info added on 2025-10-13T20:11:22.382Z>",
+            "status": "done",
             "testStrategy": "Component tests for rendering with mock data; integration tests to verify correct API data is displayed and updated in real time."
           },
           {
@@ -692,7 +692,7 @@
               1
             ],
             "details": "Create overview cards and tables for campaigns and users, showing key stats and recent activity. Implement an abuse alert panel that lists recent alerts, their severity, and links to relevant user/campaign details. Fetch data via API.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Component and integration tests to ensure correct rendering of overviews and alerts, and that alert actions (e.g., view details) function as expected."
           },
           {
@@ -1446,7 +1446,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T20:10:52.171Z",
+      "updated": "2025-10-13T20:13:05.050Z",
       "description": "Tasks for master context"
     }
   }
