@@ -1,5 +1,7 @@
+// OpenTelemetry tracing MUST be imported first for auto-instrumentation
+// It handles Sentry initialization internally when SENTRY_DSN is set
+import './tracing/init';
 import 'reflect-metadata';
-import * as Sentry from '@sentry/node';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -8,17 +10,7 @@ import { validateEnvironmentConfig } from './config/environment';
 import { createLogger } from './config/logger';
 
 async function bootstrap() {
-  // Initialize Sentry early to catch all errors
-  if (process.env.SENTRY_DSN) {
-    Sentry.init({
-      dsn: process.env.SENTRY_DSN,
-      environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
-      tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
-      integrations: [
-        ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
-      ],
-    });
-  }
+  // Note: Sentry is initialized in ./tracing/init.ts for OpenTelemetry integration
 
   // Initialize structured logger
   const logger = createLogger({
@@ -100,18 +92,17 @@ async function bootstrap() {
   logger.info(`API documentation available at http://localhost:${envConfig.apiPort}/api-docs`);
 }
 
-bootstrap().catch((err) => {
+bootstrap().catch(async (err) => {
   const errorLogger = createLogger({ name: 'api', level: 'error' });
   errorLogger.error({ error: err.message, stack: err.stack }, 'API bootstrap failed');
 
-  // Send critical bootstrap error to Sentry
+  // Send critical bootstrap error to Sentry (already initialized in tracing/init.ts)
   if (process.env.SENTRY_DSN) {
+    const Sentry = await import('@sentry/node');
     Sentry.captureException(err);
-    Sentry.close(2000).then(() => {
-      process.exit(1);
-    });
-  } else {
-    process.exit(1);
+    await Sentry.close(2000);
   }
+
+  process.exit(1);
 });
 
