@@ -1,0 +1,274 @@
+name: Database Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run migrations'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      migration_action:
+        description: 'Migration action'
+        required: true
+        type: choice
+        options:
+          - up
+          - status
+          - redo
+          - down
+      dry_run:
+        description: 'Dry run (do not apply changes)'
+        required: false
+        type: boolean
+        default: false
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/api/migrations/**'
+
+# Prevent concurrent migrations
+concurrency:
+  group: database-migrations-${{ github.event.inputs.environment || 'auto' }}
+  cancel-in-progress: false
+
+jobs:
+  validate-migrations:
+    name: Validate Migrations
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check migration files
+        run: |
+          if [ -d "migrations" ]; then
+            echo "✅ Migrations directory exists"
+            echo "Migration files:"
+            ls -lah migrations/ || echo "No migration files found"
+          else
+            echo "⚠️ No migrations directory found"
+            exit 0
+          fi
+
+      - name: Lint migration files
+        run: |
+          if [ -d "migrations" ]; then
+            echo "Checking migration file syntax..."
+            for file in migrations/*.js; do
+              if [ -f "$file" ]; then
+                node -c "$file" && echo "✅ $file is valid" || exit 1
+              fi
+            done
+          fi
+
+  run-migrations-staging:
+    name: Run Migrations (Staging)
+    needs: validate-migrations
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment:
+      name: staging
+    defaults:
+      run:
+        working-directory: ./backend/api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check migration status
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Current migration status:"
+          npm run migrate:status || true
+
+      - name: Run migrations
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          NODE_ENV: production
+        run: |
+          ACTION="${{ github.event.inputs.migration_action || 'up' }}"
+          echo "Running migration action: $ACTION"
+
+          case "$ACTION" in
+            up)
+              npm run migrate:up
+              ;;
+            down)
+              npm run migrate:down
+              ;;
+            redo)
+              npm run migrate:redo
+              ;;
+            status)
+              npm run migrate:status
+              ;;
+            *)
+              echo "Unknown action: $ACTION"
+              exit 1
+              ;;
+          esac
+
+      - name: Verify migrations
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Migration status after applying changes:"
+          npm run migrate:status
+
+      - name: Dry run summary
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "🔍 DRY RUN MODE - No changes were applied"
+          echo "Remove --dry-run flag to apply migrations"
+
+  run-migrations-production:
+    name: Run Migrations (Production)
+    needs: validate-migrations
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    environment:
+      name: production
+    defaults:
+      run:
+        working-directory: ./backend/api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Backup reminder
+        run: |
+          echo "⚠️ PRODUCTION MIGRATION"
+          echo "Ensure you have a recent database backup before proceeding"
+          echo "Database backups should be automated via Supabase dashboard"
+
+      - name: Check migration status
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "Current migration status:"
+          npm run migrate:status || true
+
+      - name: Run migrations
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          NODE_ENV: production
+        run: |
+          ACTION="${{ github.event.inputs.migration_action }}"
+          echo "Running migration action: $ACTION"
+
+          case "$ACTION" in
+            up)
+              npm run migrate:up
+              ;;
+            down)
+              echo "⚠️ WARNING: Running DOWN migration in production"
+              echo "This may cause data loss. Ensure you have backups."
+              npm run migrate:down
+              ;;
+            redo)
+              echo "⚠️ WARNING: Running REDO migration in production"
+              echo "This may cause data loss. Ensure you have backups."
+              npm run migrate:redo
+              ;;
+            status)
+              npm run migrate:status
+              ;;
+            *)
+              echo "Unknown action: $ACTION"
+              exit 1
+              ;;
+          esac
+
+      - name: Verify migrations
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "Migration status after applying changes:"
+          npm run migrate:status
+
+      - name: Dry run summary
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "🔍 DRY RUN MODE - No changes were applied"
+          echo "Remove --dry-run flag to apply migrations"
+
+      - name: Production migration summary
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          echo "✅ Production migrations completed"
+          echo "Monitor application logs for any issues"
+          echo "Be prepared to rollback if necessary"
+
+  rollback-guide:
+    name: Rollback Information
+    needs: [run-migrations-staging, run-migrations-production]
+    runs-on: ubuntu-latest
+    if: failure()
+
+    steps:
+      - name: Rollback instructions
+        run: |
+          echo "⚠️ Migration failed!"
+          echo ""
+          echo "To rollback migrations:"
+          echo "1. Go to Actions → Database Migrations"
+          echo "2. Click 'Run workflow'"
+          echo "3. Select the environment"
+          echo "4. Choose 'down' as migration action"
+          echo "5. Review changes carefully before running"
+          echo ""
+          echo "Or run manually:"
+          echo "cd backend/api"
+          echo "npm run migrate:down"
+          echo ""
+          echo "For emergency rollback, restore from backup:"
+          echo "- Supabase: Use point-in-time recovery from dashboard"
+          echo "- Self-hosted: Restore from latest backup"
