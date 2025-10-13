@@ -439,4 +439,357 @@ export class SupabaseService {
         if (error) throw error
         return data
     }
+
+    // ============ Admin - Campaign Management ============
+    async getAdminCampaigns(filters: {
+        status?: string
+        userId?: string
+        page: number
+        limit: number
+        sortBy: string
+        sortOrder: 'asc' | 'desc'
+    }) {
+        let query = this.supabase
+            .from('campaigns')
+            .select(
+                `
+                *,
+                tokens:token_id (id, symbol, mint),
+                pools:pool_id (id, pool_address, dex),
+                users:user_id (id, email)
+            `,
+                { count: 'exact' }
+            )
+
+        if (filters.status) {
+            query = query.eq('status', filters.status)
+        }
+
+        if (filters.userId) {
+            query = query.eq('user_id', filters.userId)
+        }
+
+        const from = (filters.page - 1) * filters.limit
+        const to = from + filters.limit - 1
+
+        query = query
+            .order(filters.sortBy, { ascending: filters.sortOrder === 'asc' })
+            .range(from, to)
+
+        const { data, error, count } = await query
+
+        if (error) throw error
+
+        return {
+            data: data || [],
+            total: count || 0,
+        }
+    }
+
+    async getAdminCampaignById(id: string) {
+        const { data, error } = await this.supabase
+            .from('campaigns')
+            .select(
+                `
+                *,
+                users:user_id (id, email, role),
+                tokens:token_id (id, mint, symbol, decimals),
+                pools:pool_id (id, pool_address, dex),
+                campaign_runs:campaign_runs (id, started_at, ended_at, status, summary)
+            `
+            )
+            .eq('id', id)
+            .single()
+
+        if (error) throw error
+        return data
+    }
+
+    async getAdminCampaignStats(campaignId: string) {
+        // Get total runs
+        const { count: totalRuns } = await this.supabase
+            .from('campaign_runs')
+            .select('*', { count: 'exact', head: true })
+            .eq('campaign_id', campaignId)
+
+        // Get total jobs
+        const { data: runs } = await this.supabase
+            .from('campaign_runs')
+            .select('id')
+            .eq('campaign_id', campaignId)
+
+        if (!runs || runs.length === 0) {
+            return {
+                totalRuns: totalRuns || 0,
+                totalJobs: 0,
+                totalExecutions: 0,
+                successRate: 0,
+                totalVolume: 0,
+            }
+        }
+
+        const runIds = runs.map(r => r.id)
+
+        const { count: totalJobs } = await this.supabase
+            .from('jobs')
+            .select('*', { count: 'exact', head: true })
+            .in('run_id', runIds)
+
+        // Get executions
+        const { data: jobs } = await this.supabase
+            .from('jobs')
+            .select('id, status')
+            .in('run_id', runIds)
+
+        if (!jobs || jobs.length === 0) {
+            return {
+                totalRuns: totalRuns || 0,
+                totalJobs: totalJobs || 0,
+                totalExecutions: 0,
+                successRate: 0,
+                totalVolume: 0,
+            }
+        }
+
+        const jobIds = jobs.map(j => j.id)
+        const completedJobs = jobs.filter(j => j.status === 'completed').length
+
+        const { count: totalExecutions } = await this.supabase
+            .from('executions')
+            .select('*', { count: 'exact', head: true })
+            .in('job_id', jobIds)
+
+        return {
+            totalRuns: totalRuns || 0,
+            totalJobs: totalJobs || 0,
+            totalExecutions: totalExecutions || 0,
+            successRate: totalJobs ? (completedJobs / totalJobs) * 100 : 0,
+            totalVolume: 0, // TODO: Implement volume tracking
+        }
+    }
+
+    async updateCampaignStatus(campaignId: string, status: string) {
+        const { data, error } = await this.supabase
+            .from('campaigns')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', campaignId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    }
+
+    // ============ Admin - User Management ============
+    async getAdminUsers(filters: {
+        role?: string
+        status?: string
+        search?: string
+        page: number
+        limit: number
+    }) {
+        let query = this.supabase
+            .from('users')
+            .select('*', { count: 'exact' })
+
+        if (filters.role) {
+            query = query.eq('role', filters.role)
+        }
+
+        if (filters.status) {
+            query = query.eq('status', filters.status)
+        }
+
+        if (filters.search) {
+            query = query.or(`email.ilike.%${filters.search}%,id.eq.${filters.search}`)
+        }
+
+        const from = (filters.page - 1) * filters.limit
+        const to = from + filters.limit - 1
+
+        query = query.order('created_at', { ascending: false }).range(from, to)
+
+        const { data, error, count } = await query
+
+        if (error) throw error
+
+        return {
+            data: data || [],
+            total: count || 0,
+        }
+    }
+
+    async getAdminUserById(id: string) {
+        const { data, error } = await this.supabase
+            .from('users')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error) throw error
+        return data
+    }
+
+    async getAdminUserCampaigns(userId: string) {
+        const { data, error } = await this.supabase
+            .from('campaigns')
+            .select('id, name, status, created_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        return data || []
+    }
+
+    async getAdminUserWallets(userId: string) {
+        const { data, error } = await this.supabase
+            .from('wallets')
+            .select('id, address, label, is_active')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        return data || []
+    }
+
+    async getAdminUserStats(userId: string) {
+        // Get campaign count
+        const { count: totalCampaigns } = await this.supabase
+            .from('campaigns')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+
+        // Get wallet count
+        const { count: totalWallets } = await this.supabase
+            .from('wallets')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+
+        // Get runs
+        const { data: campaigns } = await this.supabase
+            .from('campaigns')
+            .select('id')
+            .eq('user_id', userId)
+
+        if (!campaigns || campaigns.length === 0) {
+            return {
+                totalCampaigns: totalCampaigns || 0,
+                totalWallets: totalWallets || 0,
+                totalRuns: 0,
+                totalJobs: 0,
+                totalTransactions: 0,
+                totalVolume: 0,
+                successRate: 0,
+            }
+        }
+
+        const campaignIds = campaigns.map(c => c.id)
+
+        const { count: totalRuns } = await this.supabase
+            .from('campaign_runs')
+            .select('*', { count: 'exact', head: true })
+            .in('campaign_id', campaignIds)
+
+        const { data: runs } = await this.supabase
+            .from('campaign_runs')
+            .select('id')
+            .in('campaign_id', campaignIds)
+
+        if (!runs || runs.length === 0) {
+            return {
+                totalCampaigns: totalCampaigns || 0,
+                totalWallets: totalWallets || 0,
+                totalRuns: totalRuns || 0,
+                totalJobs: 0,
+                totalTransactions: 0,
+                totalVolume: 0,
+                successRate: 0,
+            }
+        }
+
+        const runIds = runs.map(r => r.id)
+
+        const { data: jobs } = await this.supabase
+            .from('jobs')
+            .select('id, status')
+            .in('run_id', runIds)
+
+        if (!jobs || jobs.length === 0) {
+            return {
+                totalCampaigns: totalCampaigns || 0,
+                totalWallets: totalWallets || 0,
+                totalRuns: totalRuns || 0,
+                totalJobs: 0,
+                totalTransactions: 0,
+                totalVolume: 0,
+                successRate: 0,
+            }
+        }
+
+        const jobIds = jobs.map(j => j.id)
+        const completedJobs = jobs.filter(j => j.status === 'completed').length
+
+        const { count: totalTransactions } = await this.supabase
+            .from('executions')
+            .select('*', { count: 'exact', head: true })
+            .in('job_id', jobIds)
+
+        return {
+            totalCampaigns: totalCampaigns || 0,
+            totalWallets: totalWallets || 0,
+            totalRuns: totalRuns || 0,
+            totalJobs: jobs.length,
+            totalTransactions: totalTransactions || 0,
+            totalVolume: 0, // TODO: Implement volume tracking
+            successRate: jobs.length ? (completedJobs / jobs.length) * 100 : 0,
+        }
+    }
+
+    async getAdminUserActivity(userId: string, limit: number) {
+        const { data, error } = await this.supabase
+            .from('audit_logs')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(limit)
+
+        if (error) throw error
+        return data || []
+    }
+
+    async updateUserRoleAndStatus(userId: string, updates: { role?: string; status?: string }) {
+        const { data, error } = await this.supabase
+            .from('users')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', userId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    }
+
+    // ============ Admin - Audit Logging ============
+    async createAuditLog(logData: {
+        user_id?: string
+        admin_id?: string
+        action: string
+        entity: string
+        entity_id?: string
+        metadata?: any
+        ip_address?: string
+        user_agent?: string
+    }) {
+        const { data, error } = await this.supabase
+            .from('audit_logs')
+            .insert({
+                ...logData,
+                created_at: new Date().toISOString(),
+            })
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    }
 }
