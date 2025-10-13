@@ -24,7 +24,8 @@
         "migrate:create": "node-pg-migrate create",
         "migrate:redo": "node-pg-migrate redo",
         "migrate:status": "node-pg-migrate status",
-        "db:seed": "ts-node scripts/seed.ts"
+        "db:seed": "ts-node scripts/seed.ts",
+        "validate:log-levels": "ts-node scripts/validate-log-levels.ts"
     },
     "dependencies": {
         "@metaplex-foundation/mpl-token-metadata": "^3.4.0",

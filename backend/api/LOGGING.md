@@ -329,6 +329,77 @@ status:error service:boggy-bot-api
 @campaignId:"camp_123abc" @level:info
 ```
 
+## Testing and Validation
+
+### Running Log Level Tests
+
+A comprehensive test suite validates log level filtering and configuration:
+
+```bash
+# Run all logger tests
+npm test -- src/config/logger.spec.ts
+
+# Run validation script to manually verify log levels
+npm run validate:log-levels
+```
+
+The test suite covers:
+- Log level filtering (debug, info, warn, error)
+- Environment-specific configuration
+- LOG_LEVEL environment variable override
+- Child logger context inheritance
+- Runtime log level changes
+- CloudWatch transport configuration
+
+### Manual Validation
+
+To manually validate log levels in different scenarios:
+
+```bash
+# Test debug level in development
+LOG_LEVEL=debug NODE_ENV=development npm run validate:log-levels
+
+# Test info level in production
+LOG_LEVEL=info NODE_ENV=production npm run validate:log-levels
+
+# Test warn level
+LOG_LEVEL=warn npm run validate:log-levels
+
+# Test error level
+LOG_LEVEL=error npm run validate:log-levels
+```
+
+### Verifying Log Filtering
+
+To verify that log filtering works correctly at each level:
+
+```typescript
+import { createLogger } from './config/logger';
+
+const logger = createLogger({ name: 'test' });
+
+// Check which levels are enabled
+console.log('Debug enabled:', logger.isLevelEnabled('debug'));
+console.log('Info enabled:', logger.isLevelEnabled('info'));
+console.log('Warn enabled:', logger.isLevelEnabled('warn'));
+console.log('Error enabled:', logger.isLevelEnabled('error'));
+
+// Test logging at different levels
+logger.debug('Debug message'); // Only appears if level <= debug
+logger.info('Info message');   // Only appears if level <= info
+logger.warn('Warn message');   // Only appears if level <= warn
+logger.error('Error message'); // Only appears if level <= error
+```
+
+### Expected Behavior by Log Level
+
+| Level | debug | info | warn | error |
+|-------|-------|------|------|-------|
+| debug | ✓ | ✓ | ✓ | ✓ |
+| info  | ✗ | ✓ | ✓ | ✓ |
+| warn  | ✗ | ✗ | ✓ | ✓ |
+| error | ✗ | ✗ | ✗ | ✓ |
+
 ## Troubleshooting
 
 ### Logs not appearing in CloudWatch
@@ -349,6 +420,13 @@ status:error service:boggy-bot-api
 1. Increase `LOG_LEVEL` to `warn` or `error`
 2. Review and reduce debug logging in hot paths
 3. Consider sampling high-frequency logs
+
+### Log level not being respected
+
+1. Verify LOG_LEVEL environment variable is set correctly
+2. Check for typos in log level names (must be: debug, info, warn, error)
+3. Ensure no code is overriding the log level after initialization
+4. Run the validation script to verify behavior: `npm run validate:log-levels`
 
 ## Migration Notes
 
