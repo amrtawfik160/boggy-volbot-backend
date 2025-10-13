@@ -17,10 +17,12 @@ import { StatusMonitorService } from './services/status-monitor.service'
 import { WebSocketModule } from './websocket/websocket.module'
 import { RedisThrottlerStorage } from './throttler/redis-throttler-storage'
 import { GeneralThrottlerGuard } from './guards/general-throttler.guard'
+import { AdminModule } from './v1/admin/admin.module'
 
 @Module({
     imports: [
         WebSocketModule,
+        AdminModule,
         ThrottlerModule.forRoot({
             throttlers: [
                 {
