@@ -691,8 +691,8 @@
             "dependencies": [
               1
             ],
-            "details": "Create overview cards and tables for campaigns and users, showing key stats and recent activity. Implement an abuse alert panel that lists recent alerts, their severity, and links to relevant user/campaign details. Fetch data via API.",
-            "status": "in-progress",
+            "details": "Create overview cards and tables for campaigns and users, showing key stats and recent activity. Implement an abuse alert panel that lists recent alerts, their severity, and links to relevant user/campaign details. Fetch data via API.\n<info added on 2025-10-13T20:13:41.701Z>\nImplementation Plan:\n\nCreate new admin dashboard pages for user management (/admin-dashboard/users/page.tsx), campaign monitoring (/admin-dashboard/campaigns/page.tsx), and abuse alerts (/admin-dashboard/alerts/page.tsx). Develop the following components: UserOverviewTable (with filters), CampaignOverviewTable (with status display), AbuseAlertCard (showing alert severity), and QuickStats (summary cards). Implement features including sortable/filterable tables, quick stats for total/active users and campaigns, alert severity badges (low, medium, high, critical), and action buttons for viewing details, suspending users, or pausing campaigns. Ensure all components are mobile responsive. Leverage existing data-table.tsx for tables and status-badge.tsx for status displays.\n</info added on 2025-10-13T20:13:41.701Z>",
+            "status": "done",
             "testStrategy": "Component and integration tests to ensure correct rendering of overviews and alerts, and that alert actions (e.g., view details) function as expected."
           },
           {
@@ -704,7 +704,7 @@
               3
             ],
             "details": "Implement buttons/switches for manual overrides (e.g., pause/resume services) with confirmation dialogs. Build a searchable, paginated audit log viewer that fetches and displays admin actions from the backend.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Test manual override controls for correct API calls and UI feedback. Verify audit log viewer displays accurate, filterable data and updates after actions."
           },
           {
@@ -1446,7 +1446,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T20:13:05.050Z",
+      "updated": "2025-10-13T20:15:26.665Z",
       "description": "Tasks for master context"
     }
   }
