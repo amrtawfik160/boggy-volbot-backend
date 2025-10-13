@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: volume-bot
+  labels:
+    name: volume-bot
+    environment: production
