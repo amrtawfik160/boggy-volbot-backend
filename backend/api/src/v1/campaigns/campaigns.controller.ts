@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus, ValidationPipe, Req } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus, ValidationPipe, Req, Inject } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard'
 import { CurrentUser } from '../../decorators/user.decorator'
 import { RequestId } from '../../decorators/request-id.decorator'
 import { SupabaseService } from '../../services/supabase.service'
 import { CampaignWebSocketGateway } from '../../websocket/websocket.gateway'
+import { MetricsService } from '../../metrics/metrics.service'
 import { Queue } from 'bullmq'
 import IORedis from 'ioredis'
 import { CreateCampaignDto, UpdateCampaignDto, DistributeDto, SellOnlyDto } from './dto'
@@ -24,6 +25,7 @@ export class CampaignsController {
     constructor(
         private readonly supabase: SupabaseService,
         private readonly gateway: CampaignWebSocketGateway,
+        private readonly metricsService: MetricsService,
     ) {
         const redisConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379')
 
@@ -86,6 +88,9 @@ export class CampaignsController {
         // Update campaign status
         await this.supabase.updateCampaign(id, user.id, { status: 'active' })
         contextLogger.info('Campaign status updated to active');
+
+        // Update active campaigns metric
+        await this.updateActiveCampaignsMetric();
 
         // Create campaign run
         const run = await this.supabase.createCampaignRun({
@@ -196,6 +201,9 @@ export class CampaignsController {
 
         // Update campaign status
         await this.supabase.updateCampaign(id, user.id, { status: 'paused' })
+
+        // Update active campaigns metric
+        await this.updateActiveCampaignsMetric();
 
         // Get active run
         const runs = await this.supabase.getCampaignRunsByCampaignId(id)
@@ -328,6 +336,9 @@ export class CampaignsController {
 
         // Update campaign status
         await this.supabase.updateCampaign(id, user.id, { status: 'stopped' })
+
+        // Update active campaigns metric
+        await this.updateActiveCampaignsMetric();
 
         // Get active run
         const runs = await this.supabase.getCampaignRunsByCampaignId(id)
@@ -560,5 +571,19 @@ export class CampaignsController {
         })
 
         return { status: 'queued' }
+    }
+
+    private async updateActiveCampaignsMetric(): Promise<void> {
+        try {
+            const { data: campaigns } = await this.supabase.getClient()
+                .from('campaigns')
+                .select('id')
+                .eq('status', 'active');
+
+            const activeCount = campaigns?.length || 0;
+            this.metricsService.activeCampaignsGauge.set(activeCount);
+        } catch (error) {
+            this.logger.error({ error }, 'Failed to update active campaigns metric');
+        }
     }
 }

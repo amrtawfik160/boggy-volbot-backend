@@ -126,6 +126,7 @@ export class TradeSellWorker extends BaseWorker<TradeSellJobData, TradeSellJobRe
       connection: this.connection,
       rpcEndpoint: process.env.RPC_ENDPOINT || '',
       rpcWebsocketEndpoint: process.env.RPC_WEBSOCKET_ENDPOINT || '',
+      metricsService: this.metricsService,
       jitoConfig,
     };
 
@@ -276,6 +277,15 @@ export class TradeSellWorker extends BaseWorker<TradeSellJobData, TradeSellJobRe
 
     await context.updateProgress(100, `Progressive sell step ${currentStep}/${times} completed`);
 
+    // Track transaction metrics
+    if (this.metricsService) {
+      this.metricsService.transactionsCounter.inc({
+        campaign_id: campaignId || 'unknown',
+        status: 'success',
+        type: 'sell'
+      });
+    }
+
     return { success: true, signature: progResult.signature };
   }
 
@@ -348,6 +358,15 @@ export class TradeSellWorker extends BaseWorker<TradeSellJobData, TradeSellJobRe
     }
 
     await context.updateProgress(100, 'Sell transaction completed');
+
+    // Track transaction metrics
+    if (this.metricsService) {
+      this.metricsService.transactionsCounter.inc({
+        campaign_id: campaignId || 'unknown',
+        status: 'success',
+        type: 'sell'
+      });
+    }
 
     return { success: true, signature: result.signature };
   }

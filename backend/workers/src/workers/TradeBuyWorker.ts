@@ -122,6 +122,7 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
       connection: this.connection,
       rpcEndpoint: process.env.RPC_ENDPOINT || '',
       rpcWebsocketEndpoint: process.env.RPC_WEBSOCKET_ENDPOINT || '',
+      metricsService: this.metricsService,
       jitoConfig,
     };
 
@@ -140,6 +141,15 @@ export class TradeBuyWorker extends BaseWorker<TradeBuyJobData, TradeBuyJobResul
     if (!result.success) {
       context.logger.error({ error: result.error }, 'Buy transaction failed');
       throw new Error(result.error || 'Buy transaction failed');
+    }
+
+    // Track transaction metrics
+    if (this.metricsService) {
+      this.metricsService.transactionsCounter.inc({
+        campaign_id: campaignId || 'unknown',
+        status: 'success',
+        type: 'buy'
+      });
     }
 
     context.logger.info({ signature: result.signature, useJito }, 'Buy transaction successful');

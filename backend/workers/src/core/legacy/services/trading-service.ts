@@ -12,6 +12,7 @@ import { SWAP_ROUTING } from '../constants';
 import { NATIVE_MINT } from '@solana/spl-token';
 import { ExecutorFactory } from '../executor/factory';
 import { TransactionExecutor } from '../executor/types';
+import { MetricsService } from '../../../services/metrics.service';
 
 export interface TradeResult {
   success: boolean;
@@ -31,6 +32,7 @@ export interface TradingServiceConfig {
   connection: Connection;
   rpcEndpoint: string;
   rpcWebsocketEndpoint: string;
+  metricsService?: MetricsService;
   jitoConfig?: {
     blockEngineUrl: string;
     authKeypair: Keypair;
@@ -44,10 +46,12 @@ export class TradingService {
   private connection: Connection;
   private stats: TradeStats;
   private config: TradingServiceConfig;
+  private metricsService?: MetricsService;
 
   constructor(config: TradingServiceConfig) {
     this.config = config;
     this.connection = config.connection;
+    this.metricsService = config.metricsService;
     this.stats = {
       totalBuys: 0,
       totalSells: 0,
@@ -318,12 +322,27 @@ export class TradingService {
           tradeLogger.debug(`Waiting ${delay}ms for token settlement (attempt ${attempt})`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
-        
+
         const { getAssociatedTokenAddress } = await import('@solana/spl-token');
         const tokenAta = await getAssociatedTokenAddress(baseMint, wallet.publicKey);
-        
-        // Check if the token account exists
+
+        // Check if the token account exists - track RPC call
+        const startTime = Date.now();
         const accountInfo = await this.connection.getAccountInfo(tokenAta, 'confirmed');
+
+        // Track RPC latency
+        if (this.metricsService) {
+          const durationSeconds = (Date.now() - startTime) / 1000;
+          this.metricsService.rpcLatencyHistogram.observe(
+            { endpoint: this.config.rpcEndpoint, method: 'getAccountInfo' },
+            durationSeconds
+          );
+          this.metricsService.rpcRequestsCounter.inc({
+            endpoint: this.config.rpcEndpoint,
+            method: 'getAccountInfo'
+          });
+        }
+
         if (!accountInfo) {
           if (attempt === maxRetries) {
             tradeLogger.debug('Token account does not exist after all retries', {
@@ -334,8 +353,22 @@ export class TradingService {
           }
           continue;
         }
-        
+
+        const balanceStartTime = Date.now();
         const tokenBalance = await this.connection.getTokenAccountBalance(tokenAta, 'confirmed');
+
+        // Track RPC latency for balance call
+        if (this.metricsService) {
+          const durationSeconds = (Date.now() - balanceStartTime) / 1000;
+          this.metricsService.rpcLatencyHistogram.observe(
+            { endpoint: this.config.rpcEndpoint, method: 'getTokenAccountBalance' },
+            durationSeconds
+          );
+          this.metricsService.rpcRequestsCounter.inc({
+            endpoint: this.config.rpcEndpoint,
+            method: 'getTokenAccountBalance'
+          });
+        }
         
         if (tokenBalance?.value?.uiAmount && tokenBalance.value.uiAmount > 0) {
           tradeLogger.debug('Token balance found', {
@@ -350,10 +383,19 @@ export class TradingService {
           tradeLogger.debug(`Token balance still zero, retrying... (${attempt}/${maxRetries})`);
         }
       } catch (error) {
+        // Track RPC error
+        if (this.metricsService) {
+          this.metricsService.rpcErrorsCounter.inc({
+            endpoint: this.config.rpcEndpoint,
+            method: 'getTokenBalance',
+            error_type: error instanceof Error ? error.name : 'Error'
+          });
+        }
+
         if (attempt === maxRetries) {
-          tradeLogger.error('Failed to get token balance after all retries', { 
-            error: error instanceof Error ? error.message : String(error), 
-            attempts: attempt 
+          tradeLogger.error('Failed to get token balance after all retries', {
+            error: error instanceof Error ? error.message : String(error),
+            attempts: attempt
           });
         }
       }

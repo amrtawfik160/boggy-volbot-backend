@@ -13,6 +13,7 @@ import {
   FundsGatherWorker,
 } from './workers';
 import { createLogger } from './config/logger';
+import { MetricsService } from './services/metrics.service';
 
 // Initialize structured logger
 const logger = createLogger({
@@ -38,6 +39,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
+// Initialize metrics service
+const metricsService = new MetricsService();
+logger.info('Metrics service initialized');
+
 // Create queues for job scheduling (used by workers to enqueue follow-up jobs)
 const tradeBuyQueue = new Queue('trade.buy', { connection: redisConnection });
 const tradeSellQueue = new Queue('trade.sell', { connection: redisConnection });
@@ -47,12 +52,14 @@ const statusQueue = new Queue('status', { connection: redisConnection });
 const gatherWorker = new GatherWorker({
   connection: redisConnection,
   supabase,
+  metricsService,
 });
 
 const tradeBuyWorker = new TradeBuyWorker(
   {
     connection: redisConnection,
     supabase,
+    metricsService,
   },
   connection
 );
@@ -61,6 +68,7 @@ const tradeSellWorker = new TradeSellWorker(
   {
     connection: redisConnection,
     supabase,
+    metricsService,
   },
   connection,
   tradeBuyQueue,
@@ -71,6 +79,7 @@ const distributeWorker = new DistributeWorker(
   {
     connection: redisConnection,
     supabase,
+    metricsService,
   },
   connection,
   tradeBuyQueue
@@ -79,6 +88,7 @@ const distributeWorker = new DistributeWorker(
 const statusWorker = new StatusWorker({
   connection: redisConnection,
   supabase,
+  metricsService,
   // WebSocket broadcasting will be handled by the API service
   // The StatusWorker updates the database, and the API polls or uses database triggers
 });
@@ -86,12 +96,14 @@ const statusWorker = new StatusWorker({
 const webhookWorker = new WebhookWorker({
   connection: redisConnection,
   supabase,
+  metricsService,
 });
 
 const fundsGatherWorker = new FundsGatherWorker(
   {
     connection: redisConnection,
     supabase,
+    metricsService,
   },
   connection
 );
@@ -107,6 +119,29 @@ const statusAggregatorWorker = new StatusAggregatorWorker({
 
 // Start the periodic scheduler
 statusAggregatorWorker.start();
+
+// Start periodic queue depth tracking (every 10 seconds)
+const updateQueueDepths = async () => {
+  try {
+    await Promise.all([
+      gatherWorker.updateQueueDepthMetric(),
+      tradeBuyWorker.updateQueueDepthMetric(),
+      tradeSellWorker.updateQueueDepthMetric(),
+      distributeWorker.updateQueueDepthMetric(),
+      statusWorker.updateQueueDepthMetric(),
+      webhookWorker.updateQueueDepthMetric(),
+      fundsGatherWorker.updateQueueDepthMetric(),
+    ]);
+  } catch (error: any) {
+    logger.error({ error: error.message }, 'Failed to update queue depths');
+  }
+};
+
+// Initial update
+updateQueueDepths();
+
+// Update every 10 seconds
+const queueDepthInterval = setInterval(updateQueueDepths, 10000);
 
 // Event listeners for monitoring
 const workers = [
@@ -154,6 +189,9 @@ const shutdown = async () => {
 
   // Stop the status aggregator first
   statusAggregatorWorker.stop();
+
+  // Stop queue depth tracking
+  clearInterval(queueDepthInterval);
 
   await Promise.all(workers.map(w => w.close()));
   await tradeBuyQueue.close();

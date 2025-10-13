@@ -3,12 +3,14 @@ import IORedis from 'ioredis';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createLogger, createChildLogger } from '../config/logger';
 import type pino from 'pino';
+import { MetricsService } from '../services/metrics.service';
 
 export interface BaseWorkerConfig {
   queueName: string;
   connection: IORedis;
   concurrency?: number;
   supabase: SupabaseClient;
+  metricsService?: MetricsService;
   enableIdempotency?: boolean;
   enableDeadLetterQueue?: boolean;
   deadLetterQueueName?: string;
@@ -28,11 +30,13 @@ export abstract class BaseWorker<T = any, R = any> {
   protected config: BaseWorkerConfig;
   protected deadLetterQueue?: Queue;
   protected logger: pino.Logger;
+  protected metricsService?: MetricsService;
   private processedSignatures: Set<string> = new Set();
 
   constructor(config: BaseWorkerConfig) {
     this.config = config;
     this.logger = createLogger({ name: config.queueName });
+    this.metricsService = config.metricsService;
 
     // Initialize dead-letter queue if enabled
     if (config.enableDeadLetterQueue) {
@@ -75,6 +79,14 @@ export abstract class BaseWorker<T = any, R = any> {
 
       this.logger.info(context, 'Job completed successfully');
 
+      // Track job completion metrics
+      if (this.metricsService) {
+        this.metricsService.jobsProcessedCounter.inc({
+          queue_name: this.config.queueName,
+          status: 'success'
+        });
+      }
+
       // Update database job status if dbJobId is provided
       if ((job.data as any)?.dbJobId) {
         await this.config.supabase
@@ -92,6 +104,14 @@ export abstract class BaseWorker<T = any, R = any> {
       if ((job.data as any)?.dbJobId) context.dbJobId = (job.data as any).dbJobId;
 
       this.logger.error(context, 'Job failed');
+
+      // Track job failure metrics
+      if (this.metricsService) {
+        this.metricsService.jobsFailedCounter.inc({
+          queue_name: this.config.queueName,
+          error_type: error.name || 'Error'
+        });
+      }
 
       // Update database job status
       if ((job.data as any)?.dbJobId) {
@@ -134,6 +154,9 @@ export abstract class BaseWorker<T = any, R = any> {
   }
 
   private async processJob(job: Job<T>): Promise<R> {
+    // Start timer for job processing duration
+    const startTime = Date.now();
+
     // Create contextual logger with job context
     const logContext: any = { jobId: job.id };
     if ((job.data as any)?.campaignId) logContext.campaignId = (job.data as any).campaignId;
@@ -207,9 +230,33 @@ export abstract class BaseWorker<T = any, R = any> {
       // Execute the worker's specific logic
       const result = await this.execute(job.data, context);
 
+      // Track job processing duration
+      if (this.metricsService) {
+        const durationSeconds = (Date.now() - startTime) / 1000;
+        this.metricsService.jobProcessingDuration.observe(
+          {
+            queue_name: this.config.queueName,
+            job_type: job.name
+          },
+          durationSeconds
+        );
+      }
+
       contextLogger.info('Job execution completed');
       return result;
     } catch (error: any) {
+      // Track job processing duration even on failure
+      if (this.metricsService) {
+        const durationSeconds = (Date.now() - startTime) / 1000;
+        this.metricsService.jobProcessingDuration.observe(
+          {
+            queue_name: this.config.queueName,
+            job_type: job.name
+          },
+          durationSeconds
+        );
+      }
+
       contextLogger.error({ error: error.message, stack: error.stack }, 'Job execution error');
       throw error; // Re-throw to trigger retry logic
     }
@@ -243,5 +290,33 @@ export abstract class BaseWorker<T = any, R = any> {
    */
   getDeadLetterQueue(): Queue | undefined {
     return this.deadLetterQueue;
+  }
+
+  /**
+   * Update queue depth metric
+   * Should be called periodically to track queue depth
+   */
+  async updateQueueDepthMetric(): Promise<void> {
+    if (!this.metricsService) return;
+
+    try {
+      const queue = new Queue(this.config.queueName, {
+        connection: this.config.connection
+      });
+
+      const waiting = await queue.getWaitingCount();
+      const active = await queue.getActiveCount();
+      const delayed = await queue.getDelayedCount();
+      const depth = waiting + active + delayed;
+
+      this.metricsService.queueDepthGauge.set(
+        { queue_name: this.config.queueName },
+        depth
+      );
+
+      await queue.close();
+    } catch (error: any) {
+      this.logger.error({ error: error.message }, 'Failed to update queue depth metric');
+    }
   }
 }

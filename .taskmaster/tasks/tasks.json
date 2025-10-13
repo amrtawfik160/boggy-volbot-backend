@@ -767,8 +767,8 @@
             "dependencies": [
               1
             ],
-            "details": "Use Prometheus client APIs to increment counters, record histograms, and gauge values at appropriate points in the codebase. Ensure all required metrics are updated in real time and reflect actual system state.",
-            "status": "pending",
+            "details": "Use Prometheus client APIs to increment counters, record histograms, and gauge values at appropriate points in the codebase. Ensure all required metrics are updated in real time and reflect actual system state.\n<info added on 2025-10-13T18:41:37.370Z>\nSuccessfully implemented metrics instrumentation throughout the application:\n\nBaseWorker Instrumentation:\n- Integrated MetricsService into BaseWorker class\n- Added job processing duration tracking (histogram)\n- Added job completion/failure counters\n- Implemented queue depth tracking method (updateQueueDepthMetric)\n- Tracks metrics for all queue operations automatically\n\nWorker Main (main.ts):\n- Created shared MetricsService instance\n- Passed MetricsService to all workers (Gather, TradeBuy, TradeSell, Distribute, Status, Webhook, FundsGather)\n- Added periodic queue depth updates (every 10 seconds)\n- Integrated queue depth interval into graceful shutdown\n\nTrading Service Instrumentation:\n- Added MetricsService to TradingServiceConfig\n- Instrumented RPC calls in getTokenBalance method:\n  - Track getAccountInfo latency and request count\n  - Track getTokenAccountBalance latency and request count\n  - Track RPC errors with error type labels\n- RPC metrics include endpoint and method labels\n\nWorker Transaction Metrics:\n- TradeBuyWorker: Tracks successful buy transactions with campaign_id, status, and type labels\n- TradeSellWorker: Tracks successful sell transactions in both progressive and normal sell modes\n- Passes MetricsService to TradingService for RPC tracking\n\nCampaign Controller Instrumentation:\n- Injected MetricsService into CampaignsController\n- Added active campaigns gauge updates on campaign status changes\n- Updates active campaign count when campaigns are started, paused, or stopped\n- Implemented updateActiveCampaignsMetric helper method\n\nMetricsService Setup:\n- Installed prom-client in workers package (v15.1.3)\n- Created MetricsService in workers/src/services/metrics.service.ts\n- All metrics properly labeled and configured\n\nFiles Modified:\n- backend/workers/src/workers/BaseWorker.ts\n- backend/workers/src/main.ts\n- backend/workers/src/services/metrics.service.ts (new)\n- backend/workers/src/core/legacy/services/trading-service.ts\n- backend/workers/src/workers/TradeBuyWorker.ts\n- backend/workers/src/workers/TradeSellWorker.ts\n- backend/api/src/v1/campaigns/campaigns.controller.ts\n- backend/workers/package.json\n\nThe instrumentation is now complete and ready for testing!\n</info added on 2025-10-13T18:41:37.370Z>",
+            "status": "done",
             "testStrategy": "Simulate jobs, RPCs, and API calls; verify metrics update as expected via the /metrics endpoint."
           },
           {
@@ -1275,7 +1275,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T18:33:37.183Z",
+      "updated": "2025-10-13T18:41:43.763Z",
       "description": "Tasks for master context"
     }
   }
