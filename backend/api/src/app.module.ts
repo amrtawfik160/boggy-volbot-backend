@@ -1,7 +1,7 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common'
 import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerModule } from '@nestjs/throttler'
-import { HealthController } from './health/health.controller'
+import { HealthModule } from './health/health.module'
 import { MeController } from './v1/me/me.controller'
 import { TokensController } from './v1/tokens/tokens.controller'
 import { WalletsController } from './v1/wallets/wallets.controller'
@@ -27,6 +27,7 @@ import { SentryModule } from './sentry/sentry.module'
     imports: [
         SentryModule,
         MetricsModule,
+        HealthModule,
         WebSocketModule,
         AdminModule,
         ThrottlerModule.forRoot({
@@ -50,7 +51,7 @@ import { SentryModule } from './sentry/sentry.module'
             storage: new RedisThrottlerStorage(),
         }),
     ],
-    controllers: [HealthController, MeController, TokensController, WalletsController, CampaignsController, DashboardController, SettingsController],
+    controllers: [MeController, TokensController, WalletsController, CampaignsController, DashboardController, SettingsController],
     providers: [
         SupabaseService,
         EncryptionService,
