@@ -991,7 +991,60 @@
           8
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Vitest and Testing Library for Component Testing",
+            "description": "Install and configure Vitest and React Testing Library to enable component and integration tests in the frontend project.",
+            "dependencies": [],
+            "details": "Install dev dependencies: vitest, jsdom, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event. Add Vitest config to vite.config.ts with environment set to 'jsdom' and setupFiles pointing to a setup file that imports jest-dom matchers. Add test scripts to package.json. Verify setup by running a sample test.[1][2][3][4]\n<info added on 2025-10-13T20:21:29.592Z>\nVitest and Testing Library setup is complete and verified. All required dependencies are installed at specified versions. Configuration files vitest.config.ts and vitest.setup.ts are finalized, including mocks for Next.js router, Supabase client, socket.io-client, and window.matchMedia. Test scripts are present in package.json. Initial test run successful: 5 test files passing, 73 tests executed.\n</info added on 2025-10-13T20:21:29.592Z>",
+            "status": "done",
+            "testStrategy": "Run a sample test to confirm Vitest and Testing Library are correctly configured and tests execute successfully."
+          },
+          {
+            "id": 2,
+            "title": "Write Component Tests for Key UI Components",
+            "description": "Create and implement unit and integration tests for Dashboard, CampaignForm, and AdminDashboard components using Vitest and Testing Library.",
+            "dependencies": [
+              1
+            ],
+            "details": "For each key component (Dashboard, CampaignForm, AdminDashboard), write test files (e.g., Dashboard.test.tsx) covering rendering, user interactions, and state changes. Use Testing Library queries and assertions to verify expected UI behavior and edge cases.",
+            "status": "in-progress",
+            "testStrategy": "Run all component tests and ensure they pass. Check that tests cover main UI states and user flows for each component."
+          },
+          {
+            "id": 3,
+            "title": "Set Up Playwright for End-to-End (E2E) Testing",
+            "description": "Install and configure Playwright to enable E2E browser-based testing for critical frontend user flows.",
+            "dependencies": [],
+            "details": "Install Playwright and its dependencies. Initialize Playwright config (e.g., playwright.config.ts). Set up scripts in package.json for running E2E tests. Optionally configure base URL and test directory. Verify setup by running a sample Playwright test.",
+            "status": "pending",
+            "testStrategy": "Run a sample E2E test to confirm Playwright is correctly installed and configured."
+          },
+          {
+            "id": 4,
+            "title": "Write E2E Tests for Critical User Flows",
+            "description": "Implement Playwright E2E tests for login, campaign creation, and campaign monitoring flows.",
+            "dependencies": [
+              3
+            ],
+            "details": "Create Playwright test files for each critical flow: login, create campaign, monitor campaign. Automate browser actions and assertions to verify end-to-end functionality, including form submissions, navigation, and UI updates.",
+            "status": "pending",
+            "testStrategy": "Run E2E tests and ensure all critical flows pass. Validate that tests cover expected user journeys and error handling."
+          },
+          {
+            "id": 5,
+            "title": "Add Test Coverage Reporting for Frontend Tests",
+            "description": "Configure and enable code coverage reporting for both component and E2E tests to monitor and improve test coverage.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Enable coverage reporting in Vitest by setting coverage options in the config and adding coverage scripts. For Playwright, integrate coverage tools or use Playwright's built-in coverage features if available. Ensure reports are generated in a standard format (e.g., lcov, HTML) and accessible to the team.",
+            "status": "pending",
+            "testStrategy": "Run test suites with coverage enabled and verify that coverage reports are generated and reflect actual test coverage."
+          }
+        ]
       },
       {
         "id": 21,
@@ -1446,7 +1499,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T20:18:32.810Z",
+      "updated": "2025-10-13T20:21:35.831Z",
       "description": "Tasks for master context"
     }
   }
