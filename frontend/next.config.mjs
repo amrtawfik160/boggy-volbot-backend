@@ -5,6 +5,9 @@ const nextConfig = {
 
   // Asset prefix for static assets
   assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
+
+  // Enable standalone output for Docker builds
+  output: 'standalone',
 };
 
 export default nextConfig;

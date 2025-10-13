@@ -1,0 +1,224 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'k8s/**'
+      - 'docker-compose.prod.yml'
+      - '.github/workflows/build-and-deploy.yml'
+
+# Prevent concurrent deployments
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  build-frontend:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend
+          tags: |
+            type=sha,prefix={{branch}}-,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-backend-api:
+    name: Build Backend API Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api
+          tags: |
+            type=sha,prefix={{branch}}-,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/api
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-backend-workers:
+    name: Build Backend Workers Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/workers
+          tags: |
+            type=sha,prefix={{branch}}-,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Workers image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/workers
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [build-frontend, build-backend-api, build-backend-workers]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy notification
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:main"
+          echo "API: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api:main"
+          echo "Workers: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/workers:main"
+
+      # Uncomment and configure when ready to deploy
+      # - name: Deploy to Kubernetes
+      #   uses: azure/k8s-deploy@v4
+      #   with:
+      #     namespace: volume-bot-staging
+      #     manifests: |
+      #       k8s/namespace.yaml
+      #       k8s/configmap.yaml
+      #       k8s/secrets.yaml
+      #       k8s/api-deployment.yaml
+      #       k8s/worker-deployment.yaml
+      #       k8s/redis-deployment.yaml
+      #     images: |
+      #       ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:main
+      #       ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api:main
+      #       ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/workers:main
+
+      # - name: Verify deployment
+      #   run: |
+      #     kubectl rollout status deployment/api -n volume-bot-staging
+      #     kubectl rollout status deployment/worker -n volume-bot-staging
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Images built and pushed successfully"
+          echo "📦 Images ready for deployment"
+          echo ""
+          echo "To deploy manually:"
+          echo "1. Pull images from GitHub Container Registry"
+          echo "2. Update image tags in k8s manifests or docker-compose"
+          echo "3. Apply configurations to your cluster/environment"
+
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [deploy-staging]
+    environment:
+      name: staging
+
+    steps:
+      - name: Rollback notification
+        run: |
+          echo "Deployment failed. Initiating rollback..."
+
+      # Uncomment when Kubernetes deployment is configured
+      # - name: Rollback Kubernetes deployment
+      #   run: |
+      #     kubectl rollout undo deployment/api -n volume-bot-staging
+      #     kubectl rollout undo deployment/worker -n volume-bot-staging
+      #     kubectl rollout status deployment/api -n volume-bot-staging
+      #     kubectl rollout status deployment/worker -n volume-bot-staging
+
+      - name: Rollback summary
+        run: |
+          echo "⚠️ Deployment failed"
+          echo "Manual rollback may be required"
+          echo "Check logs for details"
