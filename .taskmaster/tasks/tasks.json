@@ -663,7 +663,64 @@
           7
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Admin-Only Route Group and Authentication",
+            "description": "Implement protected routing for the admin dashboard, ensuring only authenticated admin users can access dashboard routes.",
+            "dependencies": [],
+            "details": "Use React Router to define a route group for admin pages. Integrate authentication logic to restrict access, displaying a login or unauthorized page for non-admin users. Ensure session management and logout functionality are present.\n<info added on 2025-10-13T20:09:06.320Z>\nImplementation Plan for Admin-Only Route Group:\n\n- The database already includes a 'profiles' table with a 'role' field (user/admin) for role-based access control.\n- The frontend uses Next.js 15 App Router and Supabase authentication.\n- Extend the existing middleware.ts to enforce admin role checks on admin routes.\n- Create a new (admin) route group in the Next.js app directory structure.\n- Implement /frontend/app/(admin)/layout.tsx to serve as an admin route guard, verifying user.role === 'admin' before rendering child routes.\n- Add /frontend/app/(admin)/dashboard/page.tsx as the main admin dashboard entry point.\n- Develop /frontend/lib/supabase/admin-guard.ts as a reusable helper for admin role validation.\n- Update middleware.ts to redirect unauthorized users attempting to access admin routes to a login or unauthorized page.\n- Ensure session management and logout functionality are integrated with Supabase authentication and the admin route guard.\n</info added on 2025-10-13T20:09:06.320Z>",
+            "status": "done",
+            "testStrategy": "Write integration tests to verify that only admin users can access dashboard routes and that unauthorized users are redirected appropriately."
+          },
+          {
+            "id": 2,
+            "title": "Develop System Health Dashboard Components",
+            "description": "Create UI components to display system health metrics, including real-time status indicators and charts.",
+            "dependencies": [
+              1
+            ],
+            "details": "Design and implement widgets for system uptime, API status, error rates, and resource usage using Chakra UI or MUI. Integrate with backend APIs to fetch and display live health data. Use charting libraries for visualizations.",
+            "status": "in-progress",
+            "testStrategy": "Component tests for rendering with mock data; integration tests to verify correct API data is displayed and updated in real time."
+          },
+          {
+            "id": 3,
+            "title": "Implement Campaign/User Overview and Abuse Alerts",
+            "description": "Build dashboard sections for campaign/user summaries and display abuse alerts with actionable details.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create overview cards and tables for campaigns and users, showing key stats and recent activity. Implement an abuse alert panel that lists recent alerts, their severity, and links to relevant user/campaign details. Fetch data via API.",
+            "status": "pending",
+            "testStrategy": "Component and integration tests to ensure correct rendering of overviews and alerts, and that alert actions (e.g., view details) function as expected."
+          },
+          {
+            "id": 4,
+            "title": "Add Manual Override Controls and Audit Log Viewer",
+            "description": "Provide UI controls for manual system overrides and a viewer for audit logs, ensuring traceability of admin actions.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement buttons/switches for manual overrides (e.g., pause/resume services) with confirmation dialogs. Build a searchable, paginated audit log viewer that fetches and displays admin actions from the backend.",
+            "status": "pending",
+            "testStrategy": "Test manual override controls for correct API calls and UI feedback. Verify audit log viewer displays accurate, filterable data and updates after actions."
+          },
+          {
+            "id": 5,
+            "title": "Integrate API Endpoints and Finalize Dashboard UI/UX",
+            "description": "Connect all dashboard components to backend APIs, ensure cohesive UI/UX, and perform final polish and accessibility checks.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Wire up all components to their respective API endpoints using Axios or Fetch. Refine layout and styling for consistency using Chakra UI/MUI. Conduct accessibility and responsiveness reviews, and address any UI/UX issues.",
+            "status": "pending",
+            "testStrategy": "End-to-end tests for all dashboard flows, manual UI/UX review, and accessibility testing using tools like axe-core."
+          }
+        ]
       },
       {
         "id": 14,
@@ -1389,7 +1446,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T20:05:40.825Z",
+      "updated": "2025-10-13T20:10:52.171Z",
       "description": "Tasks for master context"
     }
   }
