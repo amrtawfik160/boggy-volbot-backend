@@ -591,7 +591,7 @@
           2,
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -677,7 +677,67 @@
           2
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install and Configure Pino Logger in API and Worker Services",
+            "description": "Set up Pino v8+ as the logging library in both API and worker codebases, ensuring consistent configuration.",
+            "dependencies": [],
+            "details": "Add Pino as a dependency using npm. Create a shared logger configuration that sets log levels (debug, info, warn, error) and outputs structured JSON. Ensure the logger is initialized in both API and worker entry points, and that environment-specific settings (e.g., pretty output in development) are respected.\n<info added on 2025-10-13T17:50:30.852Z>\nSuccessfully completed installation and configuration of Pino logger in both API and worker services:\n\nInstalled pino@10.0.0 and pino-pretty@13.1.2 as dependencies.\n\nCreated shared logger configuration modules in backend/api/src/config/logger.ts and backend/workers/src/config/logger.ts.\n\nLogger initialized in API entry point (backend/api/src/main.ts) with service name 'api', environment-aware configuration, LOG_LEVEL support from environment variables, structured JSON output in production, and pretty printing in development.\n\nLogger initialized in worker entry point (backend/workers/src/main.ts) with service name 'worker', environment-aware configuration, LOG_LEVEL support, and structured JSON output for worker events (completed, failed, error).\n\nAll console.log statements replaced with structured logger calls.\n\nBoth services build successfully with no logger-related errors.\n\nLogger configuration supports all required log levels (debug, info, warn, error) and is ready for context field injection in subsequent tasks.\n</info added on 2025-10-13T17:50:30.852Z>",
+            "status": "done",
+            "testStrategy": "Verify logger initialization in both services and check for structured JSON output in logs."
+          },
+          {
+            "id": 2,
+            "title": "Implement Contextual Logging with Required Fields",
+            "description": "Enhance log entries to include userId, campaignId, jobId, and requestId where applicable.",
+            "dependencies": [
+              1
+            ],
+            "details": "Modify logger usage to attach context fields (userId, campaignId, jobId) to each log entry. For API requests, extract and inject requestId into the logger context. For workers, propagate jobId and campaignId. Use Pino child loggers or bindings to ensure these fields are present in all relevant logs.",
+            "status": "pending",
+            "testStrategy": "Unit test log output for presence of context fields. Integration test with sample requests and jobs to confirm correct field propagation."
+          },
+          {
+            "id": 3,
+            "title": "Refactor Existing Logging Statements to Use Pino",
+            "description": "Replace all legacy or ad-hoc logging (e.g., console.log) with structured Pino logger calls across API and workers.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Search for all instances of console.log, console.error, or other loggers. Refactor these to use the configured Pino logger, ensuring correct log level and context usage. Remove or disable legacy logging to avoid duplication.",
+            "status": "pending",
+            "testStrategy": "Code review for complete replacement. Run application and verify only Pino logs are emitted."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Log Aggregation with Datadog or CloudWatch",
+            "description": "Set up log transport to forward structured logs from API and workers to Datadog or AWS CloudWatch.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Configure Pino transport or use a log forwarder (e.g., pino-cloudwatch, Datadog agent) to send logs to the chosen aggregation platform. Ensure log format and metadata are preserved. Document environment variables and deployment changes required for aggregation.",
+            "status": "pending",
+            "testStrategy": "Integration test by generating logs and verifying their appearance and structure in Datadog or CloudWatch."
+          },
+          {
+            "id": 5,
+            "title": "Implement and Validate Log Level Controls and Filtering",
+            "description": "Ensure log level configuration is environment-aware and supports filtering by severity in production.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Expose log level as a configuration option (e.g., via environment variable). Test that log output respects the configured level in development, test, and production. Document how to adjust log levels and verify filtering works as expected.",
+            "status": "pending",
+            "testStrategy": "Functional tests for log level filtering. Manual verification in different environments."
+          }
+        ]
       },
       {
         "id": 15,
@@ -1158,7 +1218,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T17:43:30.542Z",
+      "updated": "2025-10-13T17:50:30.904Z",
       "description": "Tasks for master context"
     }
   }

@@ -12,6 +12,14 @@ import {
   WebhookWorker,
   FundsGatherWorker,
 } from './workers';
+import { createLogger } from './config/logger';
+
+// Initialize structured logger
+const logger = createLogger({
+  name: 'worker',
+  environment: process.env.NODE_ENV,
+  level: (process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error') || 'info',
+});
 
 // Initialize connections
 const connection = new Connection(
@@ -116,21 +124,33 @@ workers.forEach((worker) => {
   const workerInstance = worker.getWorker();
 
   workerInstance.on('completed', (job) => {
-    console.log(`✅ Worker ${workerInstance.name}: Job ${job.id} completed`);
+    logger.info({
+      worker: workerInstance.name,
+      jobId: job.id,
+    }, 'Worker job completed');
   });
 
   workerInstance.on('failed', (job, err) => {
-    console.error(`❌ Worker ${workerInstance.name}: Job ${job?.id} failed:`, err.message);
+    logger.error({
+      worker: workerInstance.name,
+      jobId: job?.id,
+      error: err.message,
+      stack: err.stack,
+    }, 'Worker job failed');
   });
 
   workerInstance.on('error', (err) => {
-    console.error(`⚠️ Worker ${workerInstance.name} error:`, err);
+    logger.error({
+      worker: workerInstance.name,
+      error: err.message,
+      stack: err.stack,
+    }, 'Worker error');
   });
 });
 
 // Graceful shutdown
 const shutdown = async () => {
-  console.log('Shutdown signal received, closing workers...');
+  logger.info('Shutdown signal received, closing workers...');
 
   // Stop the status aggregator first
   statusAggregatorWorker.stop();
@@ -141,21 +161,24 @@ const shutdown = async () => {
   await statusQueue.close();
   await redisConnection.quit();
 
-  console.log('All workers closed gracefully');
+  logger.info('All workers closed gracefully');
   process.exit(0);
 };
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-console.log('✨ Volume Bot Workers Started');
-console.log('🔄 Workers initialized:');
-console.log('  - Gather Worker (concurrency: 5)');
-console.log('  - Trade Buy Worker (concurrency: 3)');
-console.log('  - Trade Sell Worker (concurrency: 3)');
-console.log('  - Distribute Worker (concurrency: 2)');
-console.log('  - Status Worker (concurrency: 5)');
-console.log('  - Status Aggregator Worker (interval: ' + (process.env.STATUS_AGGREGATOR_INTERVAL_SECONDS || '15') + 's)');
-console.log('  - Webhook Worker (concurrency: 10)');
-console.log('  - Funds Gather Worker (concurrency: 1)');
-console.log('📡 Listening for jobs...');
+logger.info('Volume Bot Workers Started');
+logger.info({
+  workers: [
+    { name: 'Gather Worker', concurrency: 5 },
+    { name: 'Trade Buy Worker', concurrency: 3 },
+    { name: 'Trade Sell Worker', concurrency: 3 },
+    { name: 'Distribute Worker', concurrency: 2 },
+    { name: 'Status Worker', concurrency: 5 },
+    { name: 'Status Aggregator Worker', interval: `${process.env.STATUS_AGGREGATOR_INTERVAL_SECONDS || '15'}s` },
+    { name: 'Webhook Worker', concurrency: 10 },
+    { name: 'Funds Gather Worker', concurrency: 1 },
+  ],
+}, 'Workers initialized');
+logger.info('Listening for jobs...');

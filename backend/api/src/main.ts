@@ -4,12 +4,22 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { validateEnvironmentConfig } from './config/environment';
+import { createLogger } from './config/logger';
 
 async function bootstrap() {
+  // Initialize structured logger
+  const logger = createLogger({
+    name: 'api',
+    environment: process.env.NODE_ENV,
+    level: (process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error') || 'info',
+  });
+
   // Validate environment configuration before starting
   const envConfig = validateEnvironmentConfig();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: false, // Disable default NestJS logger, we'll use Pino
+  });
 
   // Enable global validation pipe with class-validator
   app.useGlobalPipes(
@@ -73,13 +83,13 @@ async function bootstrap() {
 
   await app.listen(envConfig.apiPort);
 
-  console.log(`✅ API is running on port ${envConfig.apiPort}`);
-  console.log(`📚 API documentation available at http://localhost:${envConfig.apiPort}/api-docs`);
+  logger.info(`API is running on port ${envConfig.apiPort}`);
+  logger.info(`API documentation available at http://localhost:${envConfig.apiPort}/api-docs`);
 }
 
 bootstrap().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error('❌ API bootstrap failed:', err);
+  const errorLogger = createLogger({ name: 'api', level: 'error' });
+  errorLogger.error({ error: err.message, stack: err.stack }, 'API bootstrap failed');
   process.exit(1);
 });
 
