@@ -9,6 +9,7 @@ import { CampaignsController } from './v1/campaigns/campaigns.controller'
 import { DashboardController } from './v1/dashboard/dashboard.controller'
 import { SettingsController } from './v1/settings/settings.controller'
 import { SupabaseService } from './services/supabase.service'
+import { RedisCacheService } from './services/redis-cache.service'
 import { EncryptionService } from './services/encryption.service'
 import { KeyManagementService } from './services/key-management.service'
 import { TransactionSigningService } from './services/transaction-signing.service'
@@ -53,6 +54,7 @@ import { SentryModule } from './sentry/sentry.module'
     ],
     controllers: [MeController, TokensController, WalletsController, CampaignsController, DashboardController, SettingsController],
     providers: [
+        RedisCacheService,
         SupabaseService,
         EncryptionService,
         KeyManagementService,

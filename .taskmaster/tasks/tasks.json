@@ -990,7 +990,7 @@
           7,
           8
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1040,8 +1040,8 @@
               1,
               3
             ],
-            "details": "Enable coverage reporting in Vitest by setting coverage options in the config and adding coverage scripts. For Playwright, integrate coverage tools or use Playwright's built-in coverage features if available. Ensure reports are generated in a standard format (e.g., lcov, HTML) and accessible to the team.",
-            "status": "in-progress",
+            "details": "Enable coverage reporting in Vitest by setting coverage options in the config and adding coverage scripts. For Playwright, integrate coverage tools or use Playwright's built-in coverage features if available. Ensure reports are generated in a standard format (e.g., lcov, HTML) and accessible to the team.\n<info added on 2025-10-13T20:33:43.234Z>\nTest coverage reporting configuration is complete and fully functional. The Vitest coverage setup now includes the LCOV reporter alongside HTML, JSON, and text formats. Comprehensive exclusion patterns have been applied to omit e2e/, .next/, test files, and config files from coverage calculations. A detailed tests-README.md has been created, documenting the entire testing infrastructure, instructions for running tests, configuration details, guidance on writing tests, CI/CD integration steps, and troubleshooting tips. All configuration and documentation changes have been committed to git.\n</info added on 2025-10-13T20:33:43.234Z>",
+            "status": "done",
             "testStrategy": "Run test suites with coverage enabled and verify that coverage reports are generated and reflect actual test coverage."
           }
         ]
@@ -1478,8 +1478,62 @@
           1,
           15
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add and Tune Database Indexes for Critical Queries",
+            "description": "Analyze slow database queries and add or optimize indexes to improve query performance.",
+            "dependencies": [],
+            "details": "Profile API endpoints and queue workers to identify slow queries. Use EXPLAIN plans to determine missing or suboptimal indexes. Add or adjust indexes on tables related to pool and token info, campaign runs, and job tracking. Validate index effectiveness and monitor query latency before and after changes.\n<info added on 2025-10-14T08:10:08.609Z>\nCreated and applied migration 002_add_performance_indexes.sql implementing targeted composite, partial, and GIN indexes for all high-traffic tables and query patterns identified in supabase.service.ts. Indexes include: campaign (user_id + created_at, status + created_at), campaign_runs (campaign_id + started_at, status), jobs (run_id + created_at, run_id + status, queue, type), executions (job_id + created_at, created_at), wallets (user_id + created_at, user_id + is_active partial), pools (pool_address, dex), audit_logs (user_id + created_at, action, entity, entity + entity_id), user_encryption_keys (user_id + key_version), webhooks (user_id + is_active partial, url), and GIN indexes for JSONB columns (params, metadata, payload). Added covering indexes for admin queries and ran ANALYZE to refresh statistics. All indexes are aligned with the most frequent and latency-sensitive queries, including getCampaignsByUserId, getAdminCampaigns, getCampaignRunsByCampaignId, getRecentExecutions, getCampaignLogs, getWalletsByUserId, getUserActivity, getAdminUserActivity, and admin dashboard queries.\n</info added on 2025-10-14T08:10:08.609Z>",
+            "status": "done",
+            "testStrategy": "Run before/after query benchmarks and monitor DB query latency metrics."
+          },
+          {
+            "id": 2,
+            "title": "Implement Redis Caching for Pool and Token Information",
+            "description": "Introduce Redis caching for frequently accessed pool and token data to reduce database load.",
+            "dependencies": [
+              1
+            ],
+            "details": "Identify endpoints and worker logic that repeatedly fetch pool/token info. Integrate Redis (using ioredis) to cache these responses with appropriate TTL and cache invalidation strategies. Ensure cache consistency on updates and handle cache misses gracefully.\n<info added on 2025-10-14T08:12:29.780Z>\nImplemented comprehensive Redis caching for pool and token information:\n\n- Developed RedisCacheService (backend/api/src/services/redis-cache.service.ts) providing generic get/set/del methods with automatic JSON serialization, as well as specialized methods for pools (cachePool, getCachedPool, cachePoolsByToken, getCachedPoolsByToken) and tokens (cacheToken, getCachedToken, cacheTokenByMint, getCachedTokenByMint, cacheAllTokens).\n- Added cache invalidation methods (invalidatePoolCache, invalidateTokenCache) and pattern-based deletion for bulk invalidation.\n- Configured TTLs: pools cached for 10 minutes, tokens for 1 hour, default 5 minutes.\n- Enabled connection pooling, retry strategy, and error handling for Redis connections.\n- Implemented cache statistics monitoring (hits, misses, memory usage).\n- Integrated RedisCacheService into SupabaseService with a cache-first pattern for all token and pool read operations, and cache invalidation on all write operations (createToken, updateToken, deleteToken, createPool).\n- Maintained both ID-based and mint-based token caches for optimized lookups.\n- Registered RedisCacheService as a global provider in AppModule.\n- Result: Cache hits now significantly reduce database load for frequently accessed pool and token data.\n</info added on 2025-10-14T08:12:29.780Z>",
+            "status": "in-progress",
+            "testStrategy": "Measure cache hit/miss rates and compare DB load before and after caching."
+          },
+          {
+            "id": 3,
+            "title": "Add Pagination to Large API Responses",
+            "description": "Paginate API endpoints that return large datasets to improve response times and reduce payload size.",
+            "dependencies": [
+              1
+            ],
+            "details": "Identify endpoints returning large lists (e.g., campaign runs, job logs). Implement pagination using limit and offset query parameters, with sensible defaults and maximums. Update API documentation and ensure backward compatibility.",
+            "status": "pending",
+            "testStrategy": "Verify paginated responses, test edge cases (first/last page), and measure response times."
+          },
+          {
+            "id": 4,
+            "title": "Enable Connection Pooling for Postgres and Redis",
+            "description": "Configure and optimize connection pooling for both Postgres and Redis to maximize throughput and resource efficiency.",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrate pg-pool for Postgres and ioredis for Redis in both API and worker services. Tune pool sizes based on expected concurrency and resource limits. Monitor connection usage and adjust pool settings as needed.",
+            "status": "pending",
+            "testStrategy": "Stress test with concurrent requests and monitor connection counts and error rates."
+          },
+          {
+            "id": 5,
+            "title": "Tune BullMQ Queue Concurrency and Implement Job Priority",
+            "description": "Optimize BullMQ worker concurrency and introduce a job priority system to improve queue throughput and responsiveness.",
+            "dependencies": [
+              4
+            ],
+            "details": "Analyze current queue workloads and bottlenecks. Adjust BullMQ concurrency settings for each worker type. Implement job priority logic so urgent jobs are processed first. Monitor queue metrics and adjust as needed.",
+            "status": "pending",
+            "testStrategy": "Simulate mixed-priority job loads, monitor queue latency, and verify priority handling."
+          }
+        ]
       },
       {
         "id": 30,
@@ -1499,7 +1553,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-13T20:31:19.276Z",
+      "updated": "2025-10-14T08:10:20.207Z",
       "description": "Tasks for master context"
     }
   }

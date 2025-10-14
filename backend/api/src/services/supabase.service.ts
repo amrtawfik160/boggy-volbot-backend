@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { RedisCacheService } from './redis-cache.service'
 
 @Injectable()
 export class SupabaseService {
     private supabase: SupabaseClient
 
-    constructor() {
+    constructor(private readonly cache: RedisCacheService) {
         this.supabase = createClient(process.env.SUPABASE_URL || '', process.env.SUPABASE_SERVICE_ROLE_KEY || '')
     }
 
@@ -15,23 +16,55 @@ export class SupabaseService {
 
     // Tokens
     async getTokens() {
+        // Try cache first
+        const cached = await this.cache.getCachedAllTokens()
+        if (cached) return cached
+
         const { data, error } = await this.supabase.from('tokens').select('*').order('created_at', { ascending: false })
 
         if (error) throw error
+
+        // Cache the result
+        if (data) {
+            await this.cache.cacheAllTokens(data)
+        }
+
         return data
     }
 
     async getTokenById(id: string) {
-        const { data, error } = await this.supabase.from('tokens').select('*').eq('id', id).single()
+        // Try cache first
+        const cached = await this.cache.getCachedToken(id)
+        if (cached) return cached
+
+        const { data, error} = await this.supabase.from('tokens').select('*').eq('id', id).single()
 
         if (error) throw error
+
+        // Cache the result
+        if (data) {
+            await this.cache.cacheToken(id, data)
+        }
+
         return data
     }
 
     async getTokenByMint(mint: string) {
+        // Try cache first
+        const cached = await this.cache.getCachedTokenByMint(mint)
+        if (cached) return cached
+
         const { data, error } = await this.supabase.from('tokens').select('*').eq('mint', mint).single()
 
         if (error) throw error
+
+        // Cache the result
+        if (data) {
+            await this.cache.cacheTokenByMint(mint, data)
+            // Also cache by ID for consistency
+            await this.cache.cacheToken(data.id, data)
+        }
+
         return data
     }
 
@@ -39,14 +72,28 @@ export class SupabaseService {
         const { data, error } = await this.supabase.from('tokens').insert(tokenData).select().single()
 
         if (error) throw error
+
+        // Invalidate tokens cache on creation
+        await this.cache.invalidateTokenCache()
+
         return data
     }
 
     // Pools
     async getPoolsByTokenId(tokenId: string) {
+        // Try cache first
+        const cached = await this.cache.getCachedPoolsByToken(tokenId)
+        if (cached) return cached
+
         const { data, error } = await this.supabase.from('pools').select('*').eq('token_id', tokenId)
 
         if (error) throw error
+
+        // Cache the result
+        if (data) {
+            await this.cache.cachePoolsByToken(tokenId, data)
+        }
+
         return data
     }
 
@@ -54,6 +101,11 @@ export class SupabaseService {
         const { data, error } = await this.supabase.from('pools').insert(poolData).select().single()
 
         if (error) throw error
+
+        // Invalidate pool cache for this token
+        await this.cache.invalidatePoolCache()
+        await this.cache.del(`pools:token:${poolData.token_id}`)
+
         return data
     }
 
@@ -316,9 +368,19 @@ export class SupabaseService {
     }
 
     async getPoolById(id: string) {
+        // Try cache first
+        const cached = await this.cache.getCachedPool(id)
+        if (cached) return cached
+
         const { data, error } = await this.supabase.from('pools').select('*').eq('id', id).single()
 
         if (error) throw error
+
+        // Cache the result
+        if (data) {
+            await this.cache.cachePool(id, data)
+        }
+
         return data
     }
 
@@ -326,6 +388,10 @@ export class SupabaseService {
         const { data, error } = await this.supabase.from('tokens').update(updates).eq('id', id).select().single()
 
         if (error) throw error
+
+        // Invalidate cache for this token
+        await this.cache.invalidateTokenCache(id)
+
         return data
     }
 
@@ -333,6 +399,9 @@ export class SupabaseService {
         const { error } = await this.supabase.from('tokens').delete().eq('id', id)
 
         if (error) throw error
+
+        // Invalidate cache for this token
+        await this.cache.invalidateTokenCache(id)
     }
 
     // Dashboard metrics
