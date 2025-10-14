@@ -24,6 +24,7 @@ import { MetricsMiddleware } from './middleware/metrics.middleware'
 import { MetricsModule } from './metrics/metrics.module'
 import { SentryModule } from './sentry/sentry.module'
 import { NotificationsModule } from './notifications/notifications.module'
+import { WebhooksModule } from './v1/webhooks/webhooks.module'
 
 @Module({
     imports: [
@@ -33,6 +34,7 @@ import { NotificationsModule } from './notifications/notifications.module'
         WebSocketModule,
         AdminModule,
         NotificationsModule,
+        WebhooksModule,
         ThrottlerModule.forRoot({
             throttlers: [
                 {

@@ -959,8 +959,62 @@
           1,
           2
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up BullMQ Queue and Webhook Worker",
+            "description": "Initialize BullMQ queue and implement a worker to process webhook delivery jobs.",
+            "dependencies": [],
+            "details": "Install BullMQ, configure a queue for webhook events, and implement a worker that consumes jobs from the queue. Ensure the worker can receive event payloads and metadata required for delivery.\n<info added on 2025-10-14T09:49:23.497Z>\nEnhance the WebhookWorker implementation to support the following features:\n- Integrate HMAC signature generation for webhook payloads (see subtask 18.3 for details).\n- Ensure robust retry handling using the exponential backoff strategy provided by BaseWorker, including proper error categorization and dead letter queue support.\n- Log all delivery attempts and results to the database for auditing and troubleshooting (see subtask 18.5).\n- Add a dedicated test endpoint to facilitate end-to-end webhook delivery testing (see subtask 18.4).\nLeverage BaseWorker's built-in progress tracking and metrics integration for observability.\n</info added on 2025-10-14T09:49:23.497Z>",
+            "status": "done",
+            "testStrategy": "Unit test worker job processing and queue integration using mock events."
+          },
+          {
+            "id": 2,
+            "title": "Implement Webhook Delivery Logic with Exponential Backoff Retries",
+            "description": "Develop the logic to deliver webhooks to user endpoints, including retry mechanism with exponential backoff.",
+            "dependencies": [
+              1
+            ],
+            "details": "For each webhook job, send an HTTP POST to the target endpoint. On failure (e.g., network error or non-2xx response), schedule retries using exponential backoff. Use BullMQ's built-in retry and delay features to manage retry attempts and intervals.",
+            "status": "done",
+            "testStrategy": "Integration tests simulating endpoint failures and verifying correct retry timing and limits."
+          },
+          {
+            "id": 3,
+            "title": "Add HMAC Signature Generation for Webhook Security",
+            "description": "Secure webhook payloads by generating and attaching HMAC signatures using node:crypto.",
+            "dependencies": [
+              2
+            ],
+            "details": "Before sending each webhook, generate an HMAC SHA-256 signature of the payload using a shared secret. Attach the signature in a custom HTTP header (e.g., X-Signature). Use node:crypto for signature generation.",
+            "status": "done",
+            "testStrategy": "Unit tests for signature correctness and verification against known payloads and secrets."
+          },
+          {
+            "id": 4,
+            "title": "Create User-Facing Webhook Test Endpoint",
+            "description": "Provide a test endpoint for users to verify webhook delivery and signature validation.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement an HTTP endpoint that users can register as a webhook target to receive test events. The endpoint should log received payloads and signatures, and provide feedback on signature verification.",
+            "status": "done",
+            "testStrategy": "Manual and automated tests sending test events and verifying correct receipt and signature validation."
+          },
+          {
+            "id": 5,
+            "title": "Implement Webhook Delivery Logging and Monitoring",
+            "description": "Log all webhook delivery attempts, responses, and errors for auditing and debugging.",
+            "dependencies": [
+              2
+            ],
+            "details": "Store logs for each delivery attempt, including payload, endpoint, timestamp, response status, and error details. Use a database or logging service for persistence. Ensure logs are queryable for troubleshooting and compliance.",
+            "status": "done",
+            "testStrategy": "Integration tests verifying log entries for successful and failed deliveries, and log retrieval."
+          }
+        ]
       },
       {
         "id": 19,
@@ -1653,7 +1707,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-14T09:46:53.897Z",
+      "updated": "2025-10-14T09:54:44.283Z",
       "description": "Tasks for master context"
     }
   }
