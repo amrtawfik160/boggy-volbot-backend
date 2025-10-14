@@ -23,6 +23,7 @@ import { RequestContextMiddleware } from './middleware/request-context.middlewar
 import { MetricsMiddleware } from './middleware/metrics.middleware'
 import { MetricsModule } from './metrics/metrics.module'
 import { SentryModule } from './sentry/sentry.module'
+import { NotificationsModule } from './notifications/notifications.module'
 
 @Module({
     imports: [
@@ -31,6 +32,7 @@ import { SentryModule } from './sentry/sentry.module'
         HealthModule,
         WebSocketModule,
         AdminModule,
+        NotificationsModule,
         ThrottlerModule.forRoot({
             throttlers: [
                 {
