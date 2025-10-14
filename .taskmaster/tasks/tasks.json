@@ -1508,7 +1508,7 @@
               1
             ],
             "details": "Identify endpoints returning large lists (e.g., campaign runs, job logs). Implement pagination using limit and offset query parameters, with sensible defaults and maximums. Update API documentation and ensure backward compatibility.\n<info added on 2025-10-14T08:14:38.770Z>\nImplemented pagination utilities in backend/api/src/common/pagination.dto.ts, including PaginationDto for query parameters (page, limit) with validation, PaginationMeta and PaginatedResponse interfaces for standardized response metadata, and a createPaginationMeta helper with hasNextPage/hasPreviousPage flags.\n\nPagination was added to user-facing endpoints in CampaignsController:\n- GET /campaigns: lists user campaigns with pagination (max 100 per page)\n- GET /campaigns/:id/runs: lists campaign runs with pagination (max 100 per page)\n- GET /campaigns/:id/logs: lists campaign logs with pagination (max 500 per page)\n\nDashboardController now supports pagination for GET /dashboard/activity (max 100 per page).\n\nAll paginated responses follow the format:\n{\n  data: T[],\n  pagination: {\n    page, limit, total, totalPages,\n    hasNextPage, hasPreviousPage\n  }\n}\n\nAdmin endpoints for users and campaigns already had pagination.\n\nCurrent implementation uses in-memory pagination; future optimization will move pagination to database queries.\n</info added on 2025-10-14T08:14:38.770Z>",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Verify paginated responses, test edge cases (first/last page), and measure response times."
           },
           {
@@ -1518,8 +1518,8 @@
             "dependencies": [
               1
             ],
-            "details": "Integrate pg-pool for Postgres and ioredis for Redis in both API and worker services. Tune pool sizes based on expected concurrency and resource limits. Monitor connection usage and adjust pool settings as needed.",
-            "status": "pending",
+            "details": "Integrate pg-pool for Postgres and ioredis for Redis in both API and worker services. Tune pool sizes based on expected concurrency and resource limits. Monitor connection usage and adjust pool settings as needed.\n<info added on 2025-10-14T08:17:51.584Z>\nImplemented comprehensive Redis connection pooling with a centralized configuration using a singleton pattern for shared connections and isolated connections for BullMQ, including optimized pool settings (max retries, auto-pipelining, keep-alive, exponential backoff), lifecycle management with graceful shutdown, and pool statistics monitoring. Updated all relevant services to use the shared Redis pool or isolated clients as appropriate, and added an application shutdown hook for proper resource cleanup. Documented Postgres pooling, confirming Supabase's use of PostgREST and PgBouncer for optimal connection management, and created CONNECTION_POOLING.md with full documentation. These changes reduce Redis connection overhead, improve reliability and performance through command pipelining and retry logic, and ensure proper resource cleanup and queue isolation.\n</info added on 2025-10-14T08:17:51.584Z>",
+            "status": "in-progress",
             "testStrategy": "Stress test with concurrent requests and monitor connection counts and error rates."
           },
           {
@@ -1553,7 +1553,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-14T08:12:42.189Z",
+      "updated": "2025-10-14T08:14:52.432Z",
       "description": "Tasks for master context"
     }
   }

@@ -1,9 +1,11 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common'
-import Redis from 'ioredis'
+import { getRedisClient } from '../config/redis.config'
+import type Redis from 'ioredis'
 
 /**
  * Redis cache service for pool and token information
  * Provides caching with configurable TTL and automatic serialization
+ * Uses shared Redis connection pool for optimal performance
  */
 @Injectable()
 export class RedisCacheService implements OnApplicationShutdown {
@@ -15,24 +17,8 @@ export class RedisCacheService implements OnApplicationShutdown {
     private readonly TOKEN_TTL = 3600 // 1 hour
 
     constructor() {
-        const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
-        this.redis = new Redis(redisUrl, {
-            maxRetriesPerRequest: 3,
-            retryStrategy: (times: number) => {
-                const delay = Math.min(times * 50, 2000)
-                return delay
-            },
-            enableReadyCheck: true,
-            lazyConnect: false,
-        })
-
-        this.redis.on('error', (error) => {
-            console.error('Redis connection error:', error)
-        })
-
-        this.redis.on('connect', () => {
-            console.log('Redis cache connected successfully')
-        })
+        // Use shared Redis connection pool
+        this.redis = getRedisClient()
     }
 
     /**
@@ -284,6 +270,7 @@ export class RedisCacheService implements OnApplicationShutdown {
     }
 
     async onApplicationShutdown() {
-        await this.redis.quit()
+        // Don't close the shared connection here
+        // It will be closed by the application shutdown hook
     }
 }

@@ -7,7 +7,7 @@ import { SupabaseService } from '../../services/supabase.service'
 import { CampaignWebSocketGateway } from '../../websocket/websocket.gateway'
 import { MetricsService } from '../../metrics/metrics.service'
 import { Queue } from 'bullmq'
-import IORedis from 'ioredis'
+import { createRedisClient } from '../../config/redis.config'
 import { CreateCampaignDto, UpdateCampaignDto, DistributeDto, SellOnlyDto } from './dto'
 import { PaginationDto, createPaginationMeta } from '../../common/pagination.dto'
 import { createLogger, createChildLogger } from '../../config/logger'
@@ -28,7 +28,12 @@ export class CampaignsController {
         private readonly gateway: CampaignWebSocketGateway,
         private readonly metricsService: MetricsService,
     ) {
-        const redisConnection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379')
+        // Use dedicated Redis connection for BullMQ queues
+        // BullMQ needs its own connection for optimal performance and isolation
+        const redisConnection = createRedisClient({
+            maxRetriesPerRequest: null, // BullMQ handles retries
+            enableReadyCheck: false, // BullMQ doesn't need ready check
+        })
 
         this.gatherQueue = new Queue('gather', { connection: redisConnection })
         this.tradeBuyQueue = new Queue('trade.buy', { connection: redisConnection })

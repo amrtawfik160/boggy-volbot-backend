@@ -1,15 +1,16 @@
 import { ThrottlerStorage } from '@nestjs/throttler'
-import Redis from 'ioredis'
+import { getRedisClient } from '../config/redis.config'
+import type Redis from 'ioredis'
 
 /**
  * Custom Redis storage implementation for @nestjs/throttler
- * Uses ioredis to track rate limit records with automatic expiration
+ * Uses shared Redis connection pool for optimal performance
  */
 export class RedisThrottlerStorage implements ThrottlerStorage {
     private redis: Redis
 
-    constructor(redisUrl?: string) {
-        this.redis = new Redis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379')
+    constructor() {
+        this.redis = getRedisClient()
     }
 
     async increment(key: string, ttl: number): Promise<{ totalHits: number; timeToExpire: number }> {
@@ -33,6 +34,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     }
 
     async onApplicationShutdown() {
-        await this.redis.quit()
+        // Don't close the shared connection here
+        // It will be closed by the application shutdown hook
     }
 }

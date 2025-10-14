@@ -71,4 +71,10 @@ export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
         consumer.apply(RequestContextMiddleware, MetricsMiddleware).forRoutes('*');
     }
+
+    async onApplicationShutdown() {
+        // Gracefully close Redis connection pool
+        const { closeRedisClient } = await import('./config/redis.config');
+        await closeRedisClient();
+    }
 }
