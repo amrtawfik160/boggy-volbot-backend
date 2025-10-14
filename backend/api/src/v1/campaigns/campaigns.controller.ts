@@ -9,6 +9,7 @@ import { MetricsService } from '../../metrics/metrics.service'
 import { Queue } from 'bullmq'
 import IORedis from 'ioredis'
 import { CreateCampaignDto, UpdateCampaignDto, DistributeDto, SellOnlyDto } from './dto'
+import { PaginationDto, createPaginationMeta } from '../../common/pagination.dto'
 import { createLogger, createChildLogger } from '../../config/logger'
 import type { Request } from 'express'
 
@@ -37,8 +38,22 @@ export class CampaignsController {
     }
 
     @Get()
-    async listCampaigns(@CurrentUser() user: any) {
-        return await this.supabase.getCampaignsByUserId(user.id)
+    async listCampaigns(@CurrentUser() user: any, @Query() pagination: PaginationDto) {
+        const page = pagination.page || 1
+        const limit = Math.min(pagination.limit || 20, 100)
+
+        // Get all campaigns for user (temporary until we add pagination to Supabase service)
+        const allCampaigns = await this.supabase.getCampaignsByUserId(user.id)
+
+        // Paginate in-memory
+        const startIndex = (page - 1) * limit
+        const endIndex = startIndex + limit
+        const paginatedCampaigns = allCampaigns.slice(startIndex, endIndex)
+
+        return {
+            data: paginatedCampaigns,
+            pagination: createPaginationMeta(page, limit, allCampaigns.length),
+        }
     }
 
     @Get(':id')
@@ -377,25 +392,61 @@ export class CampaignsController {
     }
 
     @Get(':id/runs')
-    async getCampaignRuns(@Param('id') id: string, @CurrentUser() user: any) {
+    async getCampaignRuns(
+        @Param('id') id: string,
+        @CurrentUser() user: any,
+        @Query() pagination: PaginationDto
+    ) {
         // Verify user owns the campaign
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
             throw new HttpException('Campaign not found', HttpStatus.NOT_FOUND)
         }
 
-        return await this.supabase.getCampaignRunsByCampaignId(id)
+        const page = pagination.page || 1
+        const limit = Math.min(pagination.limit || 20, 100)
+
+        // Get all runs (temporary until we add pagination to Supabase service)
+        const allRuns = await this.supabase.getCampaignRunsByCampaignId(id)
+
+        // Paginate in-memory
+        const startIndex = (page - 1) * limit
+        const endIndex = startIndex + limit
+        const paginatedRuns = allRuns.slice(startIndex, endIndex)
+
+        return {
+            data: paginatedRuns,
+            pagination: createPaginationMeta(page, limit, allRuns.length),
+        }
     }
 
     @Get(':id/logs')
-    async getCampaignLogs(@Param('id') id: string, @CurrentUser() user: any, @Query('limit') limit: string = '100') {
+    async getCampaignLogs(
+        @Param('id') id: string,
+        @CurrentUser() user: any,
+        @Query() pagination: PaginationDto
+    ) {
         // Verify user owns the campaign
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
             throw new HttpException('Campaign not found', HttpStatus.NOT_FOUND)
         }
 
-        return await this.supabase.getCampaignLogs(id, parseInt(limit))
+        const page = pagination.page || 1
+        const limit = Math.min(pagination.limit || 100, 500) // Allow higher limit for logs
+
+        // Get all logs (temporary until we add pagination to Supabase service)
+        const allLogs = await this.supabase.getCampaignLogs(id, 10000) // Get large number
+
+        // Paginate in-memory
+        const startIndex = (page - 1) * limit
+        const endIndex = startIndex + limit
+        const paginatedLogs = allLogs.slice(startIndex, endIndex)
+
+        return {
+            data: paginatedLogs,
+            pagination: createPaginationMeta(page, limit, allLogs.length),
+        }
     }
 
     @Get(':id/status')

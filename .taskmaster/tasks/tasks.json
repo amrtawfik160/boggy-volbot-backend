@@ -1497,7 +1497,7 @@
               1
             ],
             "details": "Identify endpoints and worker logic that repeatedly fetch pool/token info. Integrate Redis (using ioredis) to cache these responses with appropriate TTL and cache invalidation strategies. Ensure cache consistency on updates and handle cache misses gracefully.\n<info added on 2025-10-14T08:12:29.780Z>\nImplemented comprehensive Redis caching for pool and token information:\n\n- Developed RedisCacheService (backend/api/src/services/redis-cache.service.ts) providing generic get/set/del methods with automatic JSON serialization, as well as specialized methods for pools (cachePool, getCachedPool, cachePoolsByToken, getCachedPoolsByToken) and tokens (cacheToken, getCachedToken, cacheTokenByMint, getCachedTokenByMint, cacheAllTokens).\n- Added cache invalidation methods (invalidatePoolCache, invalidateTokenCache) and pattern-based deletion for bulk invalidation.\n- Configured TTLs: pools cached for 10 minutes, tokens for 1 hour, default 5 minutes.\n- Enabled connection pooling, retry strategy, and error handling for Redis connections.\n- Implemented cache statistics monitoring (hits, misses, memory usage).\n- Integrated RedisCacheService into SupabaseService with a cache-first pattern for all token and pool read operations, and cache invalidation on all write operations (createToken, updateToken, deleteToken, createPool).\n- Maintained both ID-based and mint-based token caches for optimized lookups.\n- Registered RedisCacheService as a global provider in AppModule.\n- Result: Cache hits now significantly reduce database load for frequently accessed pool and token data.\n</info added on 2025-10-14T08:12:29.780Z>",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Measure cache hit/miss rates and compare DB load before and after caching."
           },
           {
@@ -1507,8 +1507,8 @@
             "dependencies": [
               1
             ],
-            "details": "Identify endpoints returning large lists (e.g., campaign runs, job logs). Implement pagination using limit and offset query parameters, with sensible defaults and maximums. Update API documentation and ensure backward compatibility.",
-            "status": "pending",
+            "details": "Identify endpoints returning large lists (e.g., campaign runs, job logs). Implement pagination using limit and offset query parameters, with sensible defaults and maximums. Update API documentation and ensure backward compatibility.\n<info added on 2025-10-14T08:14:38.770Z>\nImplemented pagination utilities in backend/api/src/common/pagination.dto.ts, including PaginationDto for query parameters (page, limit) with validation, PaginationMeta and PaginatedResponse interfaces for standardized response metadata, and a createPaginationMeta helper with hasNextPage/hasPreviousPage flags.\n\nPagination was added to user-facing endpoints in CampaignsController:\n- GET /campaigns: lists user campaigns with pagination (max 100 per page)\n- GET /campaigns/:id/runs: lists campaign runs with pagination (max 100 per page)\n- GET /campaigns/:id/logs: lists campaign logs with pagination (max 500 per page)\n\nDashboardController now supports pagination for GET /dashboard/activity (max 100 per page).\n\nAll paginated responses follow the format:\n{\n  data: T[],\n  pagination: {\n    page, limit, total, totalPages,\n    hasNextPage, hasPreviousPage\n  }\n}\n\nAdmin endpoints for users and campaigns already had pagination.\n\nCurrent implementation uses in-memory pagination; future optimization will move pagination to database queries.\n</info added on 2025-10-14T08:14:38.770Z>",
+            "status": "in-progress",
             "testStrategy": "Verify paginated responses, test edge cases (first/last page), and measure response times."
           },
           {
@@ -1553,7 +1553,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-14T08:10:20.207Z",
+      "updated": "2025-10-14T08:12:42.189Z",
       "description": "Tasks for master context"
     }
   }

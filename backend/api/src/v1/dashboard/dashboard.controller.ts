@@ -7,6 +7,7 @@ import {
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard';
 import { CurrentUser } from '../../decorators/user.decorator';
 import { SupabaseService } from '../../services/supabase.service';
+import { PaginationDto, createPaginationMeta } from '../../common/pagination.dto';
 
 @Controller('dashboard')
 @UseGuards(SupabaseAuthGuard)
@@ -57,16 +58,29 @@ export class DashboardController {
   @Get('activity')
   async getActivity(
     @CurrentUser() user: any,
-    @Query('limit') limit: string = '20',
+    @Query() pagination: PaginationDto,
   ) {
-    const activities = await this.supabase.getRecentActivity(user.id, parseInt(limit));
-    return activities.map(activity => ({
-      id: activity.id,
-      type: activity.action,
-      message: activity.metadata?.message || `${activity.action} on ${activity.entity}`,
-      timestamp: activity.created_at,
-      metadata: activity.metadata,
-    }));
+    const page = pagination.page || 1;
+    const limit = Math.min(pagination.limit || 20, 100);
+
+    // Get more activities than needed to calculate total
+    const allActivities = await this.supabase.getRecentActivity(user.id, 1000);
+
+    // Paginate in-memory
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedActivities = allActivities.slice(startIndex, endIndex);
+
+    return {
+      data: paginatedActivities.map(activity => ({
+        id: activity.id,
+        type: activity.action,
+        message: activity.metadata?.message || `${activity.action} on ${activity.entity}`,
+        timestamp: activity.created_at,
+        metadata: activity.metadata,
+      })),
+      pagination: createPaginationMeta(page, limit, allActivities.length),
+    };
   }
 }
 
