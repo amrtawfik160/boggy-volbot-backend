@@ -1555,7 +1555,7 @@
             "description": "Set up @nestjs/swagger in the NestJS project to auto-generate API documentation and ensure all endpoints are covered.",
             "dependencies": [],
             "details": "Install @nestjs/swagger and configure it in the main application module. Annotate controllers and DTOs with appropriate decorators such as @ApiOperation, @ApiProperty, and response code decorators. Organize endpoints with tags and provide example data for requests and responses. Ensure the OpenAPI spec is accessible and protected if needed.\n<info added on 2025-10-14T08:50:25.280Z>\nSwagger decorators have been added to all major controllers, fully documenting endpoints for campaigns (13), wallets (5), tokens (7), settings (2), me (1), dashboard (2), and admin metrics. @ApiProperty decorators are now present in create-campaign.dto and create-wallet.dto. The Swagger setup in main.ts is complete, including authentication, tags, and API documentation available at the /api-docs endpoint. Remaining tasks include adding @ApiProperty to all other DTOs (such as UpdateCampaignDto, UpdateWalletDto, CreateTokenDto, UpdateTokenDto, etc.) and testing the Swagger UI to verify correct display of all endpoints.\n</info added on 2025-10-14T08:50:25.280Z>",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Manual verification of Swagger UI for endpoint coverage, correctness, and example data."
           },
           {
@@ -1564,7 +1564,7 @@
             "description": "Create comprehensive documentation for deployment procedures, environment variable configuration, and initial setup.",
             "dependencies": [],
             "details": "Document step-by-step deployment instructions for supported environments (e.g., Docker, cloud platforms). List required environment variables, their purposes, and example values. Include instructions for secrets management and initial database migration. Ensure guides are clear for both new and experienced developers.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Follow the guide on a fresh environment to verify completeness and accuracy."
           },
           {
@@ -1599,7 +1599,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-14T08:43:30.683Z",
+      "updated": "2025-10-14T08:51:30.148Z",
       "description": "Tasks for master context"
     }
   }
