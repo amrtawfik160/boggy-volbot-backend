@@ -1519,7 +1519,7 @@
               1
             ],
             "details": "Integrate pg-pool for Postgres and ioredis for Redis in both API and worker services. Tune pool sizes based on expected concurrency and resource limits. Monitor connection usage and adjust pool settings as needed.\n<info added on 2025-10-14T08:17:51.584Z>\nImplemented comprehensive Redis connection pooling with a centralized configuration using a singleton pattern for shared connections and isolated connections for BullMQ, including optimized pool settings (max retries, auto-pipelining, keep-alive, exponential backoff), lifecycle management with graceful shutdown, and pool statistics monitoring. Updated all relevant services to use the shared Redis pool or isolated clients as appropriate, and added an application shutdown hook for proper resource cleanup. Documented Postgres pooling, confirming Supabase's use of PostgREST and PgBouncer for optimal connection management, and created CONNECTION_POOLING.md with full documentation. These changes reduce Redis connection overhead, improve reliability and performance through command pipelining and retry logic, and ensure proper resource cleanup and queue isolation.\n</info added on 2025-10-14T08:17:51.584Z>",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Stress test with concurrent requests and monitor connection counts and error rates."
           },
           {
@@ -1529,8 +1529,8 @@
             "dependencies": [
               4
             ],
-            "details": "Analyze current queue workloads and bottlenecks. Adjust BullMQ concurrency settings for each worker type. Implement job priority logic so urgent jobs are processed first. Monitor queue metrics and adjust as needed.",
-            "status": "pending",
+            "details": "Analyze current queue workloads and bottlenecks. Adjust BullMQ concurrency settings for each worker type. Implement job priority logic so urgent jobs are processed first. Monitor queue metrics and adjust as needed.\n<info added on 2025-10-14T08:20:44.632Z>\nImplemented BullMQ queue concurrency tuning and job priority system:\n\n- Created a centralized queue configuration file (backend/workers/src/config/queue.config.ts) with QUEUE_CONFIGS defining optimized concurrency, priority ranges (1-10 scale), rate limiting, and a JobPriority enum for consistent assignment.\n- Added getQueueConfig() to support environment variable overrides and calculatePerformanceTuning() for resource recommendations.\n- Provided getJobPriority() helper for dynamic priority assignment.\n- Updated concurrency per queue: gather (10), trade.buy (5), trade.sell (5), distribute (3), status (10), webhook (20), funds.gather (2), with priority ranges set for each.\n- Updated main.ts to use these configurations, log performance tuning recommendations at startup, and pass concurrency settings to all workers.\n- CampaignsController now assigns priority 10 to trade buy/sell jobs, ensuring all critical trading operations are prioritized.\n- Total concurrency increased from 27 to 55 concurrent jobs, enabling workers to handle 2x throughput with proper prioritization.\n- Introduced environment variables (e.g., GATHER_CONCURRENCY, TRADE_BUY_CONCURRENCY) for custom tuning.\n</info added on 2025-10-14T08:20:44.632Z>",
+            "status": "in-progress",
             "testStrategy": "Simulate mixed-priority job loads, monitor queue latency, and verify priority handling."
           }
         ]
@@ -1553,7 +1553,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-14T08:14:52.432Z",
+      "updated": "2025-10-14T08:18:08.359Z",
       "description": "Tasks for master context"
     }
   }

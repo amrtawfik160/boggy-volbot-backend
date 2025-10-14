@@ -189,11 +189,14 @@ export class CampaignsController {
                 status: 'queued',
             })
 
-            // Enqueue buy
+            // Enqueue buy with high priority
             await this.tradeBuyQueue.add(
                 'buy-token',
                 { runId: run.id, campaignId: id, walletId: w.id, amount, dbJobId: buyDbJob.id },
-                { delay: Math.round(Math.random() * 2000 + 1000) }
+                {
+                    delay: Math.round(Math.random() * 2000 + 1000),
+                    priority: 10, // Highest priority for trade execution
+                }
             )
 
             // Create DB sell job
@@ -205,8 +208,15 @@ export class CampaignsController {
                 status: 'queued',
             })
 
-            // Enqueue sell ~30s after buy
-            await this.tradeSellQueue.add('sell-token', { runId: run.id, campaignId: id, walletId: w.id, dbJobId: sellDbJob.id }, { delay: 30000 })
+            // Enqueue sell ~30s after buy with high priority
+            await this.tradeSellQueue.add(
+                'sell-token',
+                { runId: run.id, campaignId: id, walletId: w.id, dbJobId: sellDbJob.id },
+                {
+                    delay: 30000,
+                    priority: 10, // Highest priority for trade execution
+                }
+            )
         }
 
         return { campaign, run }
@@ -318,11 +328,14 @@ export class CampaignsController {
                         status: 'queued',
                     })
 
-                    // Enqueue buy
+                    // Enqueue buy with high priority
                     await this.tradeBuyQueue.add(
                         'buy-token',
                         { runId: pausedRun.id, campaignId: id, walletId: w.id, amount, dbJobId: buyDbJob.id },
-                        { delay: Math.round(Math.random() * 2000 + 1000) }
+                        {
+                            delay: Math.round(Math.random() * 2000 + 1000),
+                            priority: 10, // Highest priority
+                        }
                     )
 
                     // Create DB sell job
@@ -334,11 +347,14 @@ export class CampaignsController {
                         status: 'queued',
                     })
 
-                    // Enqueue sell ~30s after buy
+                    // Enqueue sell ~30s after buy with high priority
                     await this.tradeSellQueue.add(
                         'sell-token',
                         { runId: pausedRun.id, campaignId: id, walletId: w.id, dbJobId: sellDbJob.id },
-                        { delay: 30000 }
+                        {
+                            delay: 30000,
+                            priority: 10, // Highest priority
+                        }
                     )
                 }
             }

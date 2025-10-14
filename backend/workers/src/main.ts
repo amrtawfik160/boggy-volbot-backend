@@ -13,6 +13,7 @@ import {
   FundsGatherWorker,
 } from './workers';
 import { createLogger } from './config/logger';
+import { QUEUE_CONFIGS, calculatePerformanceTuning, getQueueConfig } from './config/queue.config';
 import { MetricsService } from './services/metrics.service';
 import { SentryService } from './services/sentry.service';
 
@@ -47,67 +48,90 @@ const supabase = createClient(
 const metricsService = new MetricsService();
 logger.info('Metrics service initialized');
 
+// Log performance tuning recommendations
+const perfTuning = calculatePerformanceTuning();
+logger.info({
+  totalConcurrency: perfTuning.totalConcurrency,
+  recommendedWorkerCount: perfTuning.recommendedWorkerCount,
+  redisConnectionPool: perfTuning.redisConnectionPool,
+}, 'Performance tuning recommendations');
+perfTuning.notes.forEach(note => logger.info(note));
+
 // Create queues for job scheduling (used by workers to enqueue follow-up jobs)
 const tradeBuyQueue = new Queue('trade.buy', { connection: redisConnection });
 const tradeSellQueue = new Queue('trade.sell', { connection: redisConnection });
 const statusQueue = new Queue('status', { connection: redisConnection });
 
-// Initialize all workers
+// Initialize all workers with configured concurrency
+const gatherConfig = getQueueConfig('gather');
 const gatherWorker = new GatherWorker({
   connection: redisConnection,
   supabase,
   metricsService,
+  concurrency: gatherConfig.concurrency,
 });
 
+const tradeBuyConfig = getQueueConfig('trade.buy');
 const tradeBuyWorker = new TradeBuyWorker(
   {
     connection: redisConnection,
     supabase,
     metricsService,
+    concurrency: tradeBuyConfig.concurrency,
   },
   connection
 );
 
+const tradeSellConfig = getQueueConfig('trade.sell');
 const tradeSellWorker = new TradeSellWorker(
   {
     connection: redisConnection,
     supabase,
     metricsService,
+    concurrency: tradeSellConfig.concurrency,
   },
   connection,
   tradeBuyQueue,
   tradeSellQueue
 );
 
+const distributeConfig = getQueueConfig('distribute');
 const distributeWorker = new DistributeWorker(
   {
     connection: redisConnection,
     supabase,
     metricsService,
+    concurrency: distributeConfig.concurrency,
   },
   connection,
   tradeBuyQueue
 );
 
+const statusConfig = getQueueConfig('status');
 const statusWorker = new StatusWorker({
   connection: redisConnection,
   supabase,
   metricsService,
+  concurrency: statusConfig.concurrency,
   // WebSocket broadcasting will be handled by the API service
   // The StatusWorker updates the database, and the API polls or uses database triggers
 });
 
+const webhookConfig = getQueueConfig('webhook');
 const webhookWorker = new WebhookWorker({
   connection: redisConnection,
   supabase,
   metricsService,
+  concurrency: webhookConfig.concurrency,
 });
 
+const fundsGatherConfig = getQueueConfig('funds.gather');
 const fundsGatherWorker = new FundsGatherWorker(
   {
     connection: redisConnection,
     supabase,
     metricsService,
+    concurrency: fundsGatherConfig.concurrency,
   },
   connection
 );
@@ -232,14 +256,14 @@ process.on('SIGINT', shutdown);
 logger.info('Volume Bot Workers Started');
 logger.info({
   workers: [
-    { name: 'Gather Worker', concurrency: 5 },
-    { name: 'Trade Buy Worker', concurrency: 3 },
-    { name: 'Trade Sell Worker', concurrency: 3 },
-    { name: 'Distribute Worker', concurrency: 2 },
-    { name: 'Status Worker', concurrency: 5 },
+    { name: 'Gather Worker', concurrency: gatherConfig.concurrency, priority: gatherConfig.priority },
+    { name: 'Trade Buy Worker', concurrency: tradeBuyConfig.concurrency, priority: tradeBuyConfig.priority },
+    { name: 'Trade Sell Worker', concurrency: tradeSellConfig.concurrency, priority: tradeSellConfig.priority },
+    { name: 'Distribute Worker', concurrency: distributeConfig.concurrency, priority: distributeConfig.priority },
+    { name: 'Status Worker', concurrency: statusConfig.concurrency, priority: statusConfig.priority },
     { name: 'Status Aggregator Worker', interval: `${process.env.STATUS_AGGREGATOR_INTERVAL_SECONDS || '15'}s` },
-    { name: 'Webhook Worker', concurrency: 10 },
-    { name: 'Funds Gather Worker', concurrency: 1 },
+    { name: 'Webhook Worker', concurrency: webhookConfig.concurrency, priority: webhookConfig.priority },
+    { name: 'Funds Gather Worker', concurrency: fundsGatherConfig.concurrency, priority: fundsGatherConfig.priority },
   ],
-}, 'Workers initialized');
+}, 'Workers initialized with tuned concurrency');
 logger.info('Listening for jobs...');
