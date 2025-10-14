@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpException, HttpStatus, ValidationPipe, Req, Inject } from '@nestjs/common'
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard'
 import { CurrentUser } from '../../decorators/user.decorator'
@@ -13,6 +14,8 @@ import { PaginationDto, createPaginationMeta } from '../../common/pagination.dto
 import { createLogger, createChildLogger } from '../../config/logger'
 import type { Request } from 'express'
 
+@ApiTags('Campaigns')
+@ApiBearerAuth('JWT-auth')
 @Controller('campaigns')
 @UseGuards(SupabaseAuthGuard)
 export class CampaignsController {
@@ -43,6 +46,11 @@ export class CampaignsController {
     }
 
     @Get()
+    @ApiOperation({ summary: 'List all campaigns', description: 'Get all campaigns for the authenticated user with pagination' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
+    @ApiResponse({ status: 200, description: 'Campaigns retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async listCampaigns(@CurrentUser() user: any, @Query() pagination: PaginationDto) {
         const page = pagination.page || 1
         const limit = Math.min(pagination.limit || 20, 100)
@@ -62,11 +70,21 @@ export class CampaignsController {
     }
 
     @Get(':id')
+    @ApiOperation({ summary: 'Get campaign by ID', description: 'Retrieve a specific campaign by its ID' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Campaign retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async getCampaign(@Param('id') id: string, @CurrentUser() user: any) {
         return await this.supabase.getCampaignById(id, user.id)
     }
 
     @Post()
+    @ApiOperation({ summary: 'Create new campaign', description: 'Create a new trading campaign' })
+    @ApiResponse({ status: 201, description: 'Campaign created successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid input data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Token not found' })
     async createCampaign(@Body() dto: CreateCampaignDto, @CurrentUser() user: any) {
         // Validate token exists
         const token = await this.supabase.getTokenById(dto.token_id)
@@ -88,12 +106,24 @@ export class CampaignsController {
     }
 
     @Patch(':id')
+    @ApiOperation({ summary: 'Update campaign', description: 'Update campaign details' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Campaign updated successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid input data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async updateCampaign(@Param('id') id: string, @Body() dto: UpdateCampaignDto, @CurrentUser() user: any) {
         return await this.supabase.updateCampaign(id, user.id, dto)
     }
 
     @Post(':id/start')
     @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
+    @ApiOperation({ summary: 'Start campaign', description: 'Start a campaign and begin trading operations' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Campaign started successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
+    @ApiResponse({ status: 429, description: 'Too many requests (max 5 per minute)' })
     async startCampaign(@Param('id') id: string, @CurrentUser() user: any, @RequestId() requestId: string) {
         const contextLogger = createChildLogger(this.logger, { userId: user.id, campaignId: id, requestId });
 
@@ -223,6 +253,11 @@ export class CampaignsController {
     }
 
     @Post(':id/pause')
+    @ApiOperation({ summary: 'Pause campaign', description: 'Pause a running campaign' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Campaign paused successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async pauseCampaign(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
@@ -269,6 +304,12 @@ export class CampaignsController {
     }
 
     @Post(':id/resume')
+    @ApiOperation({ summary: 'Resume campaign', description: 'Resume a paused campaign' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Campaign resumed successfully' })
+    @ApiResponse({ status: 400, description: 'Campaign must be paused to resume' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async resumeCampaign(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
@@ -364,6 +405,11 @@ export class CampaignsController {
     }
 
     @Post(':id/stop')
+    @ApiOperation({ summary: 'Stop campaign', description: 'Stop a running or paused campaign' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Campaign stopped successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async stopCampaign(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
@@ -413,6 +459,13 @@ export class CampaignsController {
     }
 
     @Get(':id/runs')
+    @ApiOperation({ summary: 'Get campaign runs', description: 'Get all runs for a campaign with pagination' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
+    @ApiResponse({ status: 200, description: 'Campaign runs retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async getCampaignRuns(
         @Param('id') id: string,
         @CurrentUser() user: any,
@@ -442,6 +495,13 @@ export class CampaignsController {
     }
 
     @Get(':id/logs')
+    @ApiOperation({ summary: 'Get campaign logs', description: 'Get all logs for a campaign with pagination' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 100, max: 500)' })
+    @ApiResponse({ status: 200, description: 'Campaign logs retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async getCampaignLogs(
         @Param('id') id: string,
         @CurrentUser() user: any,
@@ -471,6 +531,11 @@ export class CampaignsController {
     }
 
     @Get(':id/status')
+    @ApiOperation({ summary: 'Get campaign status', description: 'Get detailed status including latest run and queue statistics' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Campaign status retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
     async getCampaignStatus(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {
@@ -501,6 +566,13 @@ export class CampaignsController {
 
     @Post(':id/distribute')
     @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
+    @ApiOperation({ summary: 'Distribute funds', description: 'Distribute SOL to multiple wallets for trading' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Distribution queued successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid num_wallets (must be 1-100)' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
+    @ApiResponse({ status: 429, description: 'Too many requests (max 5 per minute)' })
     async distribute(
         @Param('id') id: string,
         @CurrentUser() user: any,
@@ -550,6 +622,13 @@ export class CampaignsController {
 
     @Post(':id/sell-only')
     @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
+    @ApiOperation({ summary: 'Start sell-only mode', description: 'Start selling tokens without buying (liquidation mode)' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Sell-only mode queued successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid total_times (must be 1-20)' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
+    @ApiResponse({ status: 429, description: 'Too many requests (max 5 per minute)' })
     async startSellOnly(
         @Param('id') id: string,
         @CurrentUser() user: any,
@@ -612,6 +691,12 @@ export class CampaignsController {
 
     @Post(':id/gather-funds')
     @Throttle({ 'campaign-start': { limit: 5, ttl: 60000 } })
+    @ApiOperation({ summary: 'Gather funds', description: 'Collect SOL from all wallets back to main wallet' })
+    @ApiParam({ name: 'id', description: 'Campaign ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Fund gathering queued successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Campaign not found' })
+    @ApiResponse({ status: 429, description: 'Too many requests (max 5 per minute)' })
     async gatherFunds(@Param('id') id: string, @CurrentUser() user: any) {
         const campaign = await this.supabase.getCampaignById(id, user.id)
         if (!campaign) {

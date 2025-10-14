@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard';
 import { CurrentUser } from '../../decorators/user.decorator';
@@ -19,6 +20,8 @@ import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { CreateWalletDto, UpdateWalletDto } from './dto';
 
+@ApiTags('Wallets')
+@ApiBearerAuth('JWT-auth')
 @Controller('wallets')
 @UseGuards(SupabaseAuthGuard)
 export class WalletsController {
@@ -28,17 +31,30 @@ export class WalletsController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'List all wallets', description: 'Get all wallets for the authenticated user' })
+  @ApiResponse({ status: 200, description: 'Wallets retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async listWallets(@CurrentUser() user: any) {
     return await this.supabase.getWalletsByUserId(user.id);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get wallet by ID', description: 'Retrieve a specific wallet by its ID' })
+  @ApiParam({ name: 'id', description: 'Wallet ID (UUID)' })
+  @ApiResponse({ status: 200, description: 'Wallet retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
   async getWallet(@Param('id') id: string, @CurrentUser() user: any) {
     return await this.supabase.getWalletById(id, user.id);
   }
 
   @Post()
   @Throttle({ 'wallet-creation': { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Create new wallet', description: 'Create a new wallet with address or private key' })
+  @ApiResponse({ status: 201, description: 'Wallet created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data or private key format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 429, description: 'Too many requests (max 10 per minute)' })
   async createWallet(@Body() dto: CreateWalletDto, @CurrentUser() user: any) {
     let address: string;
     let encryptedPrivateKey: Buffer | undefined;
@@ -87,6 +103,12 @@ export class WalletsController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update wallet', description: 'Update wallet details (label, is_active)' })
+  @ApiParam({ name: 'id', description: 'Wallet ID (UUID)' })
+  @ApiResponse({ status: 200, description: 'Wallet updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
   async updateWallet(
     @Param('id') id: string,
     @Body() dto: UpdateWalletDto,
@@ -97,6 +119,11 @@ export class WalletsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete wallet', description: 'Delete a wallet permanently' })
+  @ApiParam({ name: 'id', description: 'Wallet ID (UUID)' })
+  @ApiResponse({ status: 204, description: 'Wallet deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
   async deleteWallet(@Param('id') id: string, @CurrentUser() user: any) {
     await this.supabase.deleteWallet(id, user.id);
   }

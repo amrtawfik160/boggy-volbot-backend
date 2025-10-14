@@ -4,17 +4,23 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard';
 import { CurrentUser } from '../../decorators/user.decorator';
 import { SupabaseService } from '../../services/supabase.service';
 import { PaginationDto, createPaginationMeta } from '../../common/pagination.dto';
 
+@ApiTags('Dashboard')
+@ApiBearerAuth('JWT-auth')
 @Controller('dashboard')
 @UseGuards(SupabaseAuthGuard)
 export class DashboardController {
   constructor(private readonly supabase: SupabaseService) {}
 
   @Get('metrics')
+  @ApiOperation({ summary: 'Get dashboard metrics', description: 'Get dashboard overview metrics including active campaigns, 24h volume, transactions, and recent activity' })
+  @ApiResponse({ status: 200, description: 'Metrics retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMetrics(@CurrentUser() user: any) {
     const campaigns = await this.supabase.getCampaignsByUserId(user.id);
     const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
@@ -56,6 +62,11 @@ export class DashboardController {
   }
 
   @Get('activity')
+  @ApiOperation({ summary: 'Get user activity', description: 'Get paginated list of user activity events' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
+  @ApiResponse({ status: 200, description: 'Activity retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getActivity(
     @CurrentUser() user: any,
     @Query() pagination: PaginationDto,
