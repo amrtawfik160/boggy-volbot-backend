@@ -48,6 +48,12 @@ export interface EnvironmentConfig {
   awsRegion?: string;
   awsAccessKeyId?: string;
   awsSecretAccessKey?: string;
+
+  // Email notifications (Optional)
+  resendApiKey?: string;
+  emailFromAddress?: string;
+  emailFromName?: string;
+  appBaseUrl?: string;
 }
 
 /**
@@ -139,6 +145,12 @@ export function loadEnvironmentConfig(): EnvironmentConfig {
     awsRegion: process.env.AWS_REGION,
     awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
     awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+
+    // Email notifications configuration
+    resendApiKey: process.env.RESEND_API_KEY,
+    emailFromAddress: process.env.EMAIL_FROM_ADDRESS || 'notifications@example.com',
+    emailFromName: process.env.EMAIL_FROM_NAME || 'Solana Volume Bot',
+    appBaseUrl: process.env.APP_BASE_URL || (isProduction ? '' : 'http://localhost:3000'),
   };
 }
 

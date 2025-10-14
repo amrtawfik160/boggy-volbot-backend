@@ -909,8 +909,8 @@
             "dependencies": [
               1
             ],
-            "details": "Implement provider integration (Supabase Auth email or SendGrid/Resend API) with secure API key management. Abstract the email sending logic to allow switching providers if needed. Ensure support for HTML and plain text emails.",
-            "status": "in-progress",
+            "details": "Implement provider integration (Supabase Auth email or SendGrid/Resend API) with secure API key management. Abstract the email sending logic to allow switching providers if needed. Ensure support for HTML and plain text emails.\n<info added on 2025-10-14T09:41:35.067Z>\nResend npm package installed and configured with environment variables (resendApiKey, emailFromAddress, emailFromName, appBaseUrl). EmailService implemented with Resend integration, supporting both single and batch email sending, configuration verification, and graceful fallback for development environments without valid API keys. Provider-agnostic abstraction maintained to allow future switching of email delivery providers. HTML and plain text email support confirmed. Secure API key management enforced via environment configuration.\n</info added on 2025-10-14T09:41:35.067Z>",
+            "status": "done",
             "testStrategy": "Integration tests to verify successful email delivery using the provider’s sandbox/test mode."
           },
           {
@@ -921,7 +921,7 @@
               2
             ],
             "details": "Add hooks or event listeners for campaign started, completed, failed, low wallet balance, and maintenance events. Map each event to the appropriate template and recipient(s). Ensure events are debounced to prevent duplicate notifications.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Unit and integration tests simulating each event type, verifying that the correct email is triggered."
           },
           {
@@ -1653,7 +1653,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-14T09:39:50.388Z",
+      "updated": "2025-10-14T09:41:35.119Z",
       "description": "Tasks for master context"
     }
   }
