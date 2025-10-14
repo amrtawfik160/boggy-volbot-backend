@@ -892,7 +892,61 @@
           9
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Notification Template Storage",
+            "description": "Create a system to store and manage email notification templates for different event types.",
+            "dependencies": [],
+            "details": "Define a database schema or file structure for storing templates for campaign events (started, completed, failed) and system alerts (low wallet balance, maintenance). Implement CRUD operations for templates, supporting variables for dynamic content.\n<info added on 2025-10-14T09:39:50.339Z>\nAdded database schema with notification_templates, notification_logs, and user_notification_preferences tables. Implemented TypeScript types and DTOs for all notification-related entities. Developed NotificationTemplateService for CRUD operations, including template rendering and variable validation. Created NotificationPreferencesService to manage user notification preferences. All files include proper Row Level Security (RLS) policies and default template data.\n</info added on 2025-10-14T09:39:50.339Z>",
+            "status": "done",
+            "testStrategy": "Unit tests for template CRUD operations and template rendering with sample data."
+          },
+          {
+            "id": 2,
+            "title": "Integrate Email Delivery Provider (Supabase Auth, SendGrid, or Resend)",
+            "description": "Set up and configure the chosen email delivery provider for sending notifications.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement provider integration (Supabase Auth email or SendGrid/Resend API) with secure API key management. Abstract the email sending logic to allow switching providers if needed. Ensure support for HTML and plain text emails.",
+            "status": "in-progress",
+            "testStrategy": "Integration tests to verify successful email delivery using the provider’s sandbox/test mode."
+          },
+          {
+            "id": 3,
+            "title": "Implement Event Triggers for Campaign and System Alerts",
+            "description": "Develop logic to detect campaign events and system alerts, triggering email notifications accordingly.",
+            "dependencies": [
+              2
+            ],
+            "details": "Add hooks or event listeners for campaign started, completed, failed, low wallet balance, and maintenance events. Map each event to the appropriate template and recipient(s). Ensure events are debounced to prevent duplicate notifications.",
+            "status": "pending",
+            "testStrategy": "Unit and integration tests simulating each event type, verifying that the correct email is triggered."
+          },
+          {
+            "id": 4,
+            "title": "Implement Notification Dispatch and Logging",
+            "description": "Create a dispatch service to send emails and log notification delivery status and errors.",
+            "dependencies": [
+              3
+            ],
+            "details": "Build a service that consumes notification events, renders templates, sends emails via the provider, and logs delivery status (success/failure, timestamp, error details) for auditing and troubleshooting.",
+            "status": "pending",
+            "testStrategy": "Integration tests for dispatch flow, including logging of successful and failed deliveries."
+          },
+          {
+            "id": 5,
+            "title": "Add Unit and Integration Tests for End-to-End Notification Flow",
+            "description": "Develop comprehensive tests covering the full notification lifecycle from event trigger to email delivery and logging.",
+            "dependencies": [
+              4
+            ],
+            "details": "Write tests that simulate campaign and system events, verify template rendering, email sending, and logging. Include edge cases such as provider failures and invalid templates.",
+            "status": "pending",
+            "testStrategy": "Automated test suite covering all notification scenarios, with mocks for external email providers."
+          }
+        ]
       },
       {
         "id": 18,
@@ -1547,7 +1601,7 @@
           26,
           28
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1564,7 +1618,7 @@
             "description": "Create comprehensive documentation for deployment procedures, environment variable configuration, and initial setup.",
             "dependencies": [],
             "details": "Document step-by-step deployment instructions for supported environments (e.g., Docker, cloud platforms). List required environment variables, their purposes, and example values. Include instructions for secrets management and initial database migration. Ensure guides are clear for both new and experienced developers.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Follow the guide on a fresh environment to verify completeness and accuracy."
           },
           {
@@ -1572,8 +1626,8 @@
             "title": "Document Monitoring, Runbook, and Operational Procedures",
             "description": "Provide documentation for system monitoring, alerting, and operational runbooks for common scenarios.",
             "dependencies": [],
-            "details": "Describe how to set up and use monitoring tools (e.g., Prometheus, Grafana), configure alerts, and interpret metrics. Write runbooks for incident response, troubleshooting, and recovery procedures. Include escalation paths and contact information for critical issues.",
-            "status": "pending",
+            "details": "Describe how to set up and use monitoring tools (e.g., Prometheus, Grafana), configure alerts, and interpret metrics. Write runbooks for incident response, troubleshooting, and recovery procedures. Include escalation paths and contact information for critical issues.\n<info added on 2025-10-14T09:31:44.946Z>\nComprehensive monitoring and operational runbook documentation has been completed and is available in docs/MONITORING_AND_RUNBOOK.md. This includes detailed instructions for system monitoring setup, integration of the observability stack (OpenTelemetry, Sentry, and logging), configuration of metrics and alerting, and six operational runbooks covering common scenarios. The documentation also provides incident response procedures, a troubleshooting guide, and clearly defined escalation paths with contact information for critical issues.\n</info added on 2025-10-14T09:31:44.946Z>",
+            "status": "done",
             "testStrategy": "Review documentation with operations team and simulate incident scenarios using the runbooks."
           },
           {
@@ -1581,8 +1635,8 @@
             "title": "Create Architecture and Data Flow Diagrams",
             "description": "Design and include diagrams illustrating system architecture, major components, and data flows.",
             "dependencies": [],
-            "details": "Use diagramming tools (e.g., draw.io, Lucidchart) to create visual representations of the application's architecture, including service boundaries, data stores, and integration points. Document typical data flows for key operations such as campaign execution and wallet management.",
-            "status": "pending",
+            "details": "Use diagramming tools (e.g., draw.io, Lucidchart) to create visual representations of the application's architecture, including service boundaries, data stores, and integration points. Document typical data flows for key operations such as campaign execution and wallet management.\n<info added on 2025-10-14T09:34:04.579Z>\nComprehensive architecture documentation has been completed and published in docs/ARCHITECTURE.md. This includes high-level and component architecture diagrams created with Mermaid, detailed data flow diagrams for campaign creation, transaction execution, wallet distribution, and real-time metrics, as well as a database schema ERD and queue architecture diagrams. Security architecture is documented with encryption implementation details. Deployment architectures for both Docker Compose and Kubernetes are included. The documentation also covers design decision rationales, scalability considerations, and disaster recovery procedures.\n</info added on 2025-10-14T09:34:04.579Z>",
+            "status": "done",
             "testStrategy": "Validate diagrams with engineering team for accuracy and clarity."
           },
           {
@@ -1590,8 +1644,8 @@
             "title": "Write Developer Guides: Testing, Contribution, and Code Style",
             "description": "Document guidelines for testing, contributing to the project, and maintaining code style consistency.",
             "dependencies": [],
-            "details": "Provide instructions for running and writing tests, including unit, integration, and end-to-end tests. Outline contribution workflow (branching, pull requests, code review). Specify code style rules and linting setup. Include examples and references to relevant configuration files.",
-            "status": "pending",
+            "details": "Provide instructions for running and writing tests, including unit, integration, and end-to-end tests. Outline contribution workflow (branching, pull requests, code review). Specify code style rules and linting setup. Include examples and references to relevant configuration files.\n<info added on 2025-10-14T09:36:26.004Z>\nAdded comprehensive developer contributing guide at docs/CONTRIBUTING.md covering: local development setup instructions; code style guidelines for TypeScript and NestJS, including naming conventions; detailed testing guidelines using Vitest for unit, integration, and end-to-end tests; Git workflow and branching strategy; pull request and code review process; project structure overview; and common development tasks. The guide also documents best practices for mocking, linting, formatting, error handling, logging, and commit message conventions to ensure consistency and maintainability across the codebase.\n</info added on 2025-10-14T09:36:26.004Z>",
+            "status": "done",
             "testStrategy": "Peer review and attempt onboarding using the guides to ensure clarity and completeness."
           }
         ]
@@ -1599,7 +1653,7 @@
     ],
     "metadata": {
       "created": "2025-10-07T18:03:58.265Z",
-      "updated": "2025-10-14T08:51:30.148Z",
+      "updated": "2025-10-14T09:39:50.388Z",
       "description": "Tasks for master context"
     }
   }
