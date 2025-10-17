@@ -59,7 +59,11 @@ export class MigrationService {
       ignorePattern: '\\..*',
     });
 
-    return migrations.map((m) => ({
+    if (!Array.isArray(migrations)) {
+      return [];
+    }
+
+    return (migrations as any[]).map((m: any) => ({
       file: m.path,
       name: m.name,
       timestamp: m.timestamp,
@@ -85,7 +89,11 @@ export class MigrationService {
       ignorePattern: '\\..*',
     });
 
-    return migrations.map((m) => ({
+    if (!Array.isArray(migrations)) {
+      return [];
+    }
+
+    return (migrations as any[]).map((m: any) => ({
       file: m.path,
       name: m.name,
       timestamp: m.timestamp,

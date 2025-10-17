@@ -271,7 +271,7 @@ export class KeyRotationService {
   private deriveKEK(masterKey: Buffer): Buffer {
     const info = Buffer.from('kek-v1', 'utf8');
     const salt = Buffer.alloc(0);
-    return crypto.hkdfSync('sha256', masterKey, salt, info, this.keyLength);
+    return Buffer.from(crypto.hkdfSync('sha256', masterKey, salt, info, this.keyLength));
   }
 
   /**

@@ -2,14 +2,14 @@ import { IsString, IsArray, IsUrl, IsUUID, IsEnum, IsOptional } from 'class-vali
 
 export class CreateWebhookDto {
   @IsUrl()
-  url: string;
+  url!: string;
 
   @IsArray()
   @IsString({ each: true })
-  events: string[];
+  events!: string[];
 
   @IsString()
-  secret: string;
+  secret!: string;
 }
 
 export class UpdateWebhookDto {
@@ -29,7 +29,7 @@ export class UpdateWebhookDto {
 
 export class TestWebhookDto {
   @IsUUID()
-  webhookId: string;
+  webhookId!: string;
 
   @IsString()
   @IsOptional()

@@ -10,7 +10,7 @@ export class CreatePoolDto {
    */
   @IsSolanaAddress()
   @IsNotEmpty({ message: 'Pool address is required' })
-  pool_address: string;
+  pool_address!: string;
 
   /**
    * DEX name (e.g., "raydium", "orca", "jupiter")
@@ -20,7 +20,7 @@ export class CreatePoolDto {
   @IsIn(['raydium', 'orca', 'jupiter', 'other'], {
     message: 'DEX must be one of: raydium, orca, jupiter, other',
   })
-  dex: string;
+  dex!: string;
 
   /**
    * Optional pool metadata (flexible JSONB)

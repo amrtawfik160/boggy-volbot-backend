@@ -96,25 +96,25 @@ export interface UserNotificationPreferences {
  */
 export class CreateNotificationTemplateDto {
     @ApiProperty({ enum: NotificationEventType })
-    event_type: NotificationEventType
+    event_type!: NotificationEventType
 
     @ApiProperty()
-    name: string
+    name!: string
 
     @ApiProperty({ required: false })
     description?: string
 
     @ApiProperty()
-    subject: string
+    subject!: string
 
     @ApiProperty()
-    html_body: string
+    html_body!: string
 
     @ApiProperty()
-    text_body: string
+    text_body!: string
 
     @ApiProperty({ type: [String] })
-    variables: string[]
+    variables!: string[]
 
     @ApiProperty({ default: true })
     is_active: boolean = true
@@ -191,37 +191,37 @@ export interface SendNotificationDto {
  */
 export class NotificationTemplateResponseDto {
     @ApiProperty()
-    id: string
+    id!: string
 
     @ApiProperty({ enum: NotificationEventType })
-    event_type: NotificationEventType
+    event_type!: NotificationEventType
 
     @ApiProperty()
-    name: string
+    name!: string
 
     @ApiProperty({ required: false })
     description?: string
 
     @ApiProperty()
-    subject: string
+    subject!: string
 
     @ApiProperty()
-    html_body: string
+    html_body!: string
 
     @ApiProperty()
-    text_body: string
+    text_body!: string
 
     @ApiProperty({ type: [String] })
-    variables: string[]
+    variables!: string[]
 
     @ApiProperty()
-    is_active: boolean
+    is_active!: boolean
 
     @ApiProperty()
-    created_at: string
+    created_at!: string
 
     @ApiProperty()
-    updated_at: string
+    updated_at!: string
 }
 
 /**
@@ -229,28 +229,28 @@ export class NotificationTemplateResponseDto {
  */
 export class NotificationLogResponseDto {
     @ApiProperty()
-    id: string
+    id!: string
 
     @ApiProperty()
-    user_id: string
+    user_id!: string
 
     @ApiProperty({ required: false })
     template_id?: string
 
     @ApiProperty({ enum: NotificationEventType })
-    event_type: NotificationEventType
+    event_type!: NotificationEventType
 
     @ApiProperty()
-    recipient_email: string
+    recipient_email!: string
 
     @ApiProperty()
-    subject: string
+    subject!: string
 
     @ApiProperty({ enum: NotificationStatus })
-    status: NotificationStatus
+    status!: NotificationStatus
 
     @ApiProperty({ enum: EmailProvider })
-    provider: EmailProvider
+    provider!: EmailProvider
 
     @ApiProperty({ required: false })
     provider_message_id?: string
@@ -265,10 +265,10 @@ export class NotificationLogResponseDto {
     sent_at?: string
 
     @ApiProperty()
-    created_at: string
+    created_at!: string
 
     @ApiProperty()
-    updated_at: string
+    updated_at!: string
 }
 
 /**
@@ -276,35 +276,35 @@ export class NotificationLogResponseDto {
  */
 export class UserNotificationPreferencesResponseDto {
     @ApiProperty()
-    user_id: string
+    user_id!: string
 
     @ApiProperty()
-    email_enabled: boolean
+    email_enabled!: boolean
 
     @ApiProperty()
-    campaign_started: boolean
+    campaign_started!: boolean
 
     @ApiProperty()
-    campaign_completed: boolean
+    campaign_completed!: boolean
 
     @ApiProperty()
-    campaign_failed: boolean
+    campaign_failed!: boolean
 
     @ApiProperty()
-    campaign_paused: boolean
+    campaign_paused!: boolean
 
     @ApiProperty()
-    low_wallet_balance: boolean
+    low_wallet_balance!: boolean
 
     @ApiProperty()
-    maintenance_alerts: boolean
+    maintenance_alerts!: boolean
 
     @ApiProperty()
-    system_alerts: boolean
+    system_alerts!: boolean
 
     @ApiProperty()
-    created_at: string
+    created_at!: string
 
     @ApiProperty()
-    updated_at: string
+    updated_at!: string
 }
