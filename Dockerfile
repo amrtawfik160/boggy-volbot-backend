@@ -18,7 +18,7 @@ WORKDIR /app
 # Copy API directory
 COPY backend/api/package*.json ./api/
 WORKDIR /app/api
-RUN npm ci --only=production=false
+RUN npm ci --legacy-peer-deps
 COPY backend/api ./
 RUN npm run build && npm prune --production
 
@@ -26,7 +26,7 @@ RUN npm run build && npm prune --production
 WORKDIR /app
 COPY backend/workers/package*.json ./workers/
 WORKDIR /app/workers
-RUN npm ci --only=production=false
+RUN npm ci --legacy-peer-deps
 COPY backend/workers ./
 RUN npm run build && npm prune --production
 
