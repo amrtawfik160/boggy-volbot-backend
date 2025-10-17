@@ -1,0 +1,855 @@
+import { Queue, Worker, QueueEvents } from 'bullmq';
+import IORedis from 'ioredis';
+import { Connection, Keypair, PublicKey, Transaction, SystemProgram, sendAndConfirmTransaction, ComputeBudgetProgram } from '@solana/web3.js';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { createClient } from '@supabase/supabase-js';
+import bs58 from 'bs58';
+import * as crypto from 'crypto';
+import { TradingService } from './core/legacy/services/trading-service';
+import { DistributionService } from './core/legacy/services/distribution-service';
+
+// Initialize connections
+const connection = new Connection(
+  process.env.SOLANA_RPC_PRIMARY || 'https://api.mainnet-beta.solana.com'
+);
+
+const redisConnection = new IORedis(
+  process.env.REDIS_URL || 'redis://localhost:6379'
+);
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
+
+// Encryption helper
+function decryptPrivateKey(encryptedData: Buffer): string {
+  const masterKey = process.env.MASTER_ENCRYPTION_KEY || '';
+  const key = crypto.scryptSync(masterKey, 'salt', 32);
+  
+  const iv = encryptedData.subarray(0, 16);
+  const tag = encryptedData.subarray(encryptedData.length - 16);
+  const encrypted = encryptedData.subarray(16, encryptedData.length - 16);
+  
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  
+  const decrypted = Buffer.concat([
+    decipher.update(encrypted),
+    decipher.final(),
+  ]);
+  
+  return decrypted.toString('utf8');
+}
+
+function encryptPrivateKey(plainPrivateKey: string): Buffer {
+  const masterKey = process.env.MASTER_ENCRYPTION_KEY || '';
+  const key = crypto.scryptSync(masterKey, 'salt', 32);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(plainPrivateKey, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, encrypted, tag]);
+}
+
+// Queue Names
+const QUEUE_NAMES = {
+  GATHER: 'gather',
+  TRADE_BUY: 'trade.buy',
+  TRADE_SELL: 'trade.sell',
+  DISTRIBUTE: 'distribute',
+  STATUS: 'status',
+  WEBHOOK: 'webhook',
+  FUNDS_GATHER: 'funds.gather',
+};
+
+// Queues used for scheduling follow-up jobs from within workers
+const tradeBuyQueue = new Queue(QUEUE_NAMES.TRADE_BUY, { connection: redisConnection });
+const tradeSellQueue = new Queue(QUEUE_NAMES.TRADE_SELL, { connection: redisConnection });
+
+// ============= GATHER WORKER =============
+const gatherWorker = new Worker(
+  QUEUE_NAMES.GATHER,
+  async (job) => {
+    console.log(`[GATHER] Processing job ${job.id}`, job.data);
+    
+    const { runId, campaignId, poolId } = job.data;
+    
+    try {
+      // Get pool info from database
+      const { data: pool } = await supabase
+        .from('pools')
+        .select('*, tokens(*)')
+        .eq('id', poolId)
+        .single();
+
+      if (!pool) {
+        throw new Error(`Pool not found: ${poolId}`);
+      }
+
+      const poolInfo = {
+        poolId: pool.pool_address,
+        baseMint: pool.tokens.mint,
+        quoteMint: 'So11111111111111111111111111111111111111112', // SOL
+        liquidity: pool.metadata?.liquidity || 0,
+      };
+
+      // Update job status
+      // Update job status in DB if dbJobId provided
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'succeeded' })
+          .eq('id', job.data.dbJobId);
+      }
+
+      console.log(`[GATHER] Job ${job.id} completed successfully`, poolInfo);
+      return { success: true, poolInfo };
+    } catch (error: any) {
+      console.error(`[GATHER] Job ${job.id} failed:`, error);
+      
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ 
+            status: 'failed',
+            error: { message: error.message }
+          })
+          .eq('id', job.data.dbJobId);
+      }
+
+      throw error;
+    }
+  },
+  { connection: redisConnection as any, concurrency: 5 }
+);
+
+// ============= TRADE BUY WORKER =============
+const tradeBuyWorker = new Worker(
+  QUEUE_NAMES.TRADE_BUY,
+  async (job) => {
+    console.log(`[TRADE.BUY] Processing job ${job.id}`, job.data);
+    
+    const { runId, campaignId, walletId, amount } = job.data;
+    
+    try {
+      // Get campaign details
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*, pools(*), tokens(*)')
+        .eq('id', campaignId)
+        .single();
+
+      if (!campaign) {
+        throw new Error(`Campaign not found: ${campaignId}`);
+      }
+
+      // Get wallet
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('id', walletId)
+        .single();
+
+      if (!wallet || !wallet.encrypted_private_key) {
+        throw new Error('Wallet not found or has no private key');
+      }
+
+      // Decrypt wallet
+      const privateKey = decryptPrivateKey(Buffer.from(wallet.encrypted_private_key));
+      const keypair = Keypair.fromSecretKey(bs58.decode(privateKey));
+
+      // Execute buy using TradingService
+      const tradingService = new TradingService(connection);
+      const poolId = new PublicKey(campaign.pools.pool_address);
+      const baseMint = new PublicKey(campaign.tokens.mint);
+      // Load user settings for jito override
+      let useJito = (campaign.params && campaign.params.useJito) || false;
+      const { data: settings } = await supabase
+        .from('user_settings')
+        .select('jito_config')
+        .eq('user_id', campaign.user_id)
+        .single();
+      if (settings && settings.jito_config && typeof settings.jito_config.useJito === 'boolean') {
+        useJito = settings.jito_config.useJito;
+      }
+
+      const result = await tradingService.executeBuy(
+        keypair,
+        baseMint,
+        amount,
+        poolId,
+        useJito
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Buy transaction failed');
+      }
+
+      // Log execution
+      const execInsert = await supabase.from('executions').insert({
+        job_id: job.data?.dbJobId || job.id,
+        tx_signature: result.signature || 'bundled',
+        result: { type: 'buy', amount, success: true },
+      });
+
+      // Update job status
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'succeeded' })
+          .eq('id', job.data.dbJobId);
+      }
+
+      console.log(`[TRADE.BUY] Job ${job.id} completed successfully`, result.signature);
+      return { success: true, signature: result.signature };
+    } catch (error: any) {
+      console.error(`[TRADE.BUY] Job ${job.id} failed:`, error);
+      
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ 
+            status: 'failed',
+            error: { message: error.message }
+          })
+          .eq('id', job.data.dbJobId);
+      }
+
+      throw error;
+    }
+  },
+  { connection: redisConnection as any, concurrency: 3 }
+);
+
+// ============= TRADE SELL WORKER =============
+const tradeSellWorker = new Worker(
+  QUEUE_NAMES.TRADE_SELL,
+  async (job) => {
+    console.log(`[TRADE.SELL] Processing job ${job.id}`, job.data);
+    
+    const { runId, campaignId, walletId, mode, stepIndex, totalTimes, initTokenAmountBase } = job.data;
+    
+    try {
+      // Get campaign details
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*, pools(*), tokens(*)')
+        .eq('id', campaignId)
+        .single();
+
+      if (!campaign) {
+        throw new Error(`Campaign not found: ${campaignId}`);
+      }
+
+      // Get wallet
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('id', walletId)
+        .single();
+
+      if (!wallet || !wallet.encrypted_private_key) {
+        throw new Error('Wallet not found or has no private key');
+      }
+
+      // Decrypt wallet
+      const privateKey = decryptPrivateKey(Buffer.from(wallet.encrypted_private_key));
+      const keypair = Keypair.fromSecretKey(bs58.decode(privateKey));
+
+      // Execute sell using TradingService
+      const tradingService = new TradingService(connection);
+      const poolId = new PublicKey(campaign.pools.pool_address);
+      const baseMint = new PublicKey(campaign.tokens.mint);
+      const useJito = (campaign.params && campaign.params.useJito) || false;
+
+      // Load per-user settings
+      const { data: settings } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', campaign.user_id)
+        .single();
+
+      const sellCfg = (settings && settings.sell_config) || {};
+
+      // Sell-only progressive mode
+      if (mode === 'sell-only') {
+        const times = Number(totalTimes ?? sellCfg.sellAllByTimes ?? process.env.SELL_ALL_BY_TIMES ?? 1);
+        const currentStep = Number(stepIndex ?? 1);
+
+        // Determine initial token amount (base units)
+        let initBase: bigint;
+        if (initTokenAmountBase) {
+          initBase = BigInt(initTokenAmountBase);
+        } else {
+          const ata = await getAssociatedTokenAddress(baseMint, keypair.publicKey);
+          const bal = await connection.getTokenAccountBalance(ata, 'confirmed');
+          initBase = BigInt(bal.value.amount || '0');
+        }
+
+        const targetRemaining = (initBase * BigInt(times - currentStep)) / BigInt(times);
+        const ataNow = await getAssociatedTokenAddress(baseMint, keypair.publicKey);
+        const balNow = await connection.getTokenAccountBalance(ataNow, 'confirmed');
+        const currentBase = BigInt(balNow.value.amount || '0');
+        const toSell = currentBase > targetRemaining ? currentBase - targetRemaining : BigInt(0);
+
+        const progResult = await tradingService.executeSell(
+          keypair,
+          baseMint,
+          poolId,
+          useJito,
+          { tokenAmountBase: toSell.toString() }
+        );
+
+        if (!progResult.success) {
+          throw new Error(progResult.error || 'Sell transaction failed');
+        }
+
+        // Log execution
+        await supabase.from('executions').insert({
+          job_id: job.data?.dbJobId || job.id,
+          tx_signature: progResult.signature || 'bundled',
+          result: { type: 'sell', success: true, mode: 'sell-only', stepIndex: currentStep, totalTimes: times },
+        });
+
+        // Update job status
+        if (job.data?.dbJobId) {
+          await supabase
+            .from('jobs')
+            .update({ status: 'succeeded' })
+            .eq('id', job.data.dbJobId);
+        }
+
+        // Enqueue next progressive sell step if pending
+        if (currentStep < times) {
+          const { data: sellJobRow } = await supabase
+            .from('jobs')
+            .insert({
+              run_id: runId,
+              queue: QUEUE_NAMES.TRADE_SELL,
+              type: 'sell-token',
+              payload: { campaignId, walletId, mode: 'sell-only', stepIndex: currentStep + 1, totalTimes: times },
+              status: 'queued',
+            })
+            .select()
+            .single();
+
+          await tradeSellQueue.add(
+            'sell-token',
+            {
+              runId,
+              campaignId,
+              walletId,
+              mode: 'sell-only',
+              stepIndex: currentStep + 1,
+              totalTimes: times,
+              initTokenAmountBase: initBase.toString(),
+              dbJobId: sellJobRow?.id,
+            },
+            { delay: 3000 }
+          );
+        }
+
+        console.log(`[TRADE.SELL] Progressive sell ${currentStep}/${times} done`);
+        return { success: true };
+      }
+
+      // Normal loop sell with optional percent from settings
+      const percentCfg = sellCfg.percent != null ? Number(sellCfg.percent) : 100;
+      const options = percentCfg >= 100 ? undefined : { percent: Math.max(1, Math.min(100, percentCfg)) };
+
+      const result = await tradingService.executeSell(
+        keypair,
+        baseMint,
+        poolId,
+        useJito,
+        options
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Sell transaction failed');
+      }
+
+      // Log execution
+      await supabase.from('executions').insert({
+        job_id: job.data?.dbJobId || job.id,
+        tx_signature: result.signature || 'bundled',
+        result: { type: 'sell', success: true, percent: options?.percent ?? 100 },
+      });
+
+      // Update job status
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'succeeded' })
+          .eq('id', job.data.dbJobId);
+      }
+
+      // Schedule next buy/sell cycle if campaign is still active
+      const { data: campaignStatus } = await supabase
+        .from('campaigns')
+        .select('status, params')
+        .eq('id', campaignId)
+        .single();
+
+      if (campaignStatus && campaignStatus.status === 'active' && mode !== 'sell-only') {
+        // Determine randomized amount and delays
+        const params = campaignStatus.params || {};
+
+        // Fetch per-user settings to override defaults
+        const { data: owner } = await supabase
+          .from('campaigns')
+          .select('user_id')
+          .eq('id', campaignId)
+          .single();
+
+        let settings: any = null;
+        if (owner?.user_id) {
+          const { data: s } = await supabase
+            .from('user_settings')
+            .select('*')
+            .eq('user_id', owner.user_id)
+            .single();
+          settings = s || null;
+        }
+
+        const tradingCfg = settings?.trading_config || {};
+        const minAmount = Number(tradingCfg.buyLowerAmount ?? params.minTxSize ?? process.env.BUY_LOWER_AMOUNT ?? 0.001);
+        const maxAmount = Number(tradingCfg.buyUpperAmount ?? params.maxTxSize ?? process.env.BUY_UPPER_AMOUNT ?? 0.002);
+        const minInterval = Number(tradingCfg.buyIntervalMin ?? params.buyIntervalMin ?? process.env.BUY_INTERVAL_MIN ?? 2000);
+        const maxInterval = Number(tradingCfg.buyIntervalMax ?? params.buyIntervalMax ?? process.env.BUY_INTERVAL_MAX ?? 4000);
+
+        const nextAmount = Number((Math.random() * (maxAmount - minAmount) + minAmount).toFixed(6));
+        const buyDelay = Math.round(Math.random() * (maxInterval - minInterval) + minInterval);
+        const sellDelay = buyDelay + 3000; // at least 3s after buy
+
+        // Create DB job for next buy
+        const { data: jobRow } = await supabase
+          .from('jobs')
+          .insert({
+            run_id: runId,
+            queue: QUEUE_NAMES.TRADE_BUY,
+            type: 'buy-token',
+            payload: { campaignId, walletId, amount: nextAmount },
+            status: 'queued',
+          })
+          .select()
+          .single();
+
+        // Enqueue next buy job with dbJobId
+        await tradeBuyQueue.add(
+          'buy-token',
+          {
+            runId,
+            campaignId,
+            walletId,
+            amount: nextAmount,
+            dbJobId: jobRow?.id,
+          },
+          { delay: buyDelay }
+        );
+
+        // Create DB job for next sell
+        const { data: sellJobRow } = await supabase
+          .from('jobs')
+          .insert({
+            run_id: runId,
+            queue: QUEUE_NAMES.TRADE_SELL,
+            type: 'sell-token',
+            payload: { campaignId, walletId },
+            status: 'queued',
+          })
+          .select()
+          .single();
+
+        // Enqueue next sell job after delay
+        await tradeSellQueue.add(
+          'sell-token',
+          { runId, campaignId, walletId, dbJobId: sellJobRow?.id },
+          { delay: sellDelay }
+        );
+      }
+
+      console.log(`[TRADE.SELL] Job ${job.id} completed successfully`, result.signature);
+      return { success: true, signature: result.signature };
+    } catch (error: any) {
+      console.error(`[TRADE.SELL] Job ${job.id} failed:`, error);
+      
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ 
+            status: 'failed',
+            error: { message: error.message }
+          })
+          .eq('id', job.data.dbJobId);
+      }
+
+      throw error;
+    }
+  },
+  { connection: redisConnection as any, concurrency: 3 }
+);
+
+// ============= DISTRIBUTE WORKER =============
+const distributeWorker = new Worker(
+  QUEUE_NAMES.DISTRIBUTE,
+  async (job) => {
+    console.log(`[DISTRIBUTE] Processing job ${job.id}`, job.data);
+    
+    const { campaignId, distributionNum, runId } = job.data;
+    
+    try {
+      // Get campaign details
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .single();
+
+      if (!campaign) {
+        throw new Error(`Campaign not found: ${campaignId}`);
+      }
+
+      // Get main wallet
+      const { data: wallets } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', campaign.user_id)
+        .eq('is_active', true);
+
+      if (!wallets || wallets.length === 0) {
+        throw new Error('No active wallets available');
+      }
+
+      const mainWallet = wallets[0];
+      if (!mainWallet.encrypted_private_key) {
+        throw new Error('Main wallet has no private key');
+      }
+
+      // Decrypt main wallet
+      const privateKey = decryptPrivateKey(Buffer.from(mainWallet.encrypted_private_key));
+      const mainKeypair = Keypair.fromSecretKey(bs58.decode(privateKey));
+
+      // Execute distribution
+      const distributionService = new DistributionService(connection);
+      const distributionResult = await distributionService.distributeSol(
+        mainKeypair,
+        distributionNum
+      );
+
+      if (!distributionResult.success) {
+        throw new Error(`Distribution failed: ${distributionResult.failed} wallets failed`);
+      }
+
+      // Store generated wallets in database and enqueue initial trades
+      const createdAddresses: string[] = [];
+      for (const w of distributionResult.wallets) {
+        try {
+          const enc = encryptPrivateKey(bs58.encode(w.kp.secretKey));
+          const address = w.kp.publicKey.toBase58();
+          createdAddresses.push(address);
+          await supabase.from('wallets').insert({
+            user_id: campaign.user_id,
+            address,
+            encrypted_private_key: enc,
+            label: `Campaign ${campaignId} Wallet`,
+            is_active: true,
+          });
+
+          // Create and enqueue initial buy job for this wallet
+          const { data: jobRow } = await supabase
+            .from('jobs')
+            .insert({
+              run_id: runId,
+              queue: QUEUE_NAMES.TRADE_BUY,
+              type: 'buy-token',
+              payload: { campaignId, amount: w.buyAmount },
+              status: 'queued',
+            })
+            .select()
+            .single();
+
+          // Need the just-inserted wallet id to associate
+          const { data: insertedWallet } = await supabase
+            .from('wallets')
+            .select('id')
+            .eq('user_id', campaign.user_id)
+            .eq('address', address)
+            .single();
+
+          await tradeBuyQueue.add(
+            'buy-token',
+            {
+              runId,
+              campaignId,
+              walletId: insertedWallet?.id,
+              amount: w.buyAmount,
+              dbJobId: jobRow?.id,
+            },
+            { delay: Math.round(Math.random() * 2000 + 1000) }
+          );
+        } catch (e) {
+          console.error('Failed to store/enqueue generated wallet', e);
+        }
+      }
+
+      // Update job status
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'succeeded' })
+          .eq('id', job.data.dbJobId);
+      }
+
+      console.log(`[DISTRIBUTE] Job ${job.id} completed successfully`);
+      return { success: true, distributedWallets: distributionResult.wallets.length };
+    } catch (error: any) {
+      console.error(`[DISTRIBUTE] Job ${job.id} failed:`, error);
+      
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ 
+            status: 'failed',
+            error: { message: error.message }
+          })
+          .eq('id', job.data.dbJobId);
+      }
+
+      throw error;
+    }
+  },
+  { connection: redisConnection as any, concurrency: 2 }
+);
+
+// ============= FUNDS GATHER WORKER =============
+const fundsGatherWorker = new Worker(
+  QUEUE_NAMES.FUNDS_GATHER,
+  async (job) => {
+    console.log(`[FUNDS.GATHER] Processing job ${job.id}`, job.data);
+
+    const { campaignId } = job.data;
+    try {
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .single();
+
+      if (!campaign) {
+        throw new Error(`Campaign not found: ${campaignId}`);
+      }
+
+      // Get all active wallets for user
+      const { data: wallets } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', campaign.user_id)
+        .eq('is_active', true);
+
+      if (!wallets || wallets.length === 0) {
+        throw new Error('No active wallets found for funds gathering');
+      }
+
+      // Choose main wallet as the first with a private key
+      const mainWallet = wallets.find((w: any) => w.encrypted_private_key) || wallets[0];
+      if (!mainWallet || !mainWallet.encrypted_private_key) {
+        throw new Error('No suitable main wallet with private key found');
+      }
+
+      const mainPrivateKey = decryptPrivateKey(Buffer.from(mainWallet.encrypted_private_key));
+      const mainKeypair = Keypair.fromSecretKey(bs58.decode(mainPrivateKey));
+
+      for (const w of wallets) {
+        try {
+          if (!w.encrypted_private_key) continue;
+          const priv = decryptPrivateKey(Buffer.from(w.encrypted_private_key));
+          const kp = Keypair.fromSecretKey(bs58.decode(priv));
+          if (kp.publicKey.equals(mainKeypair.publicKey)) continue;
+
+          const balance = await connection.getBalance(kp.publicKey);
+          if (balance <= 0) continue;
+
+          const rent = await connection.getMinimumBalanceForRentExemption(32);
+          const lamportsToSend = Math.max(balance - rent - 13_000, 0);
+          if (lamportsToSend <= 0) continue;
+
+          const tx = new Transaction().add(
+            ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 600_000 }),
+            ComputeBudgetProgram.setComputeUnitLimit({ units: 20_000 }),
+            SystemProgram.transfer({
+              fromPubkey: kp.publicKey,
+              toPubkey: mainKeypair.publicKey,
+              lamports: lamportsToSend,
+            })
+          );
+
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          tx.feePayer = kp.publicKey;
+          await sendAndConfirmTransaction(connection, tx, [kp], { skipPreflight: true });
+        } catch (e) {
+          console.error('Failed to gather from wallet', w.address, e);
+        }
+      }
+
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'succeeded' })
+          .eq('id', job.data.dbJobId);
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error(`[FUNDS.GATHER] Job ${job.id} failed:`, error);
+      if (job.data?.dbJobId) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'failed', error: { message: error.message } })
+          .eq('id', job.data.dbJobId);
+      }
+      throw error;
+    }
+  },
+  { connection: redisConnection as any, concurrency: 1 }
+);
+
+// ============= STATUS WORKER =============
+const statusWorker = new Worker(
+  QUEUE_NAMES.STATUS,
+  async (job) => {
+    console.log(`[STATUS] Processing job ${job.id}`, job.data);
+    
+    const { campaignId } = job.data;
+    
+    try {
+      // Aggregate campaign statistics
+      const { data: runs } = await supabase
+        .from('campaign_runs')
+        .select('*, jobs(*, executions(*))')
+        .eq('campaign_id', campaignId);
+
+      if (!runs || runs.length === 0) {
+        return { success: true, stats: {} };
+      }
+
+      const latestRun = runs[0];
+      const totalJobs = latestRun.jobs?.length || 0;
+      const completedJobs = latestRun.jobs?.filter((j: any) => j.status === 'succeeded').length || 0;
+      const failedJobs = latestRun.jobs?.filter((j: any) => j.status === 'failed').length || 0;
+
+      // Update run summary
+      await supabase
+        .from('campaign_runs')
+        .update({
+          summary: {
+            totalJobs,
+            completedJobs,
+            failedJobs,
+            successRate: totalJobs > 0 ? completedJobs / totalJobs : 0,
+          }
+        })
+        .eq('id', latestRun.id);
+
+      console.log(`[STATUS] Job ${job.id} completed successfully`);
+      return { success: true, stats: { totalJobs, completedJobs, failedJobs } };
+    } catch (error: any) {
+      console.error(`[STATUS] Job ${job.id} failed:`, error);
+      throw error;
+    }
+  },
+  { connection: redisConnection as any, concurrency: 5 }
+);
+
+// ============= WEBHOOK WORKER =============
+const webhookWorker = new Worker(
+  QUEUE_NAMES.WEBHOOK,
+  async (job) => {
+    console.log(`[WEBHOOK] Processing job ${job.id}`, job.data);
+    
+    const { userId, event, payload } = job.data;
+    
+    try {
+      // Get user webhooks
+      const { data: webhooks } = await supabase
+        .from('webhooks')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      if (!webhooks || webhooks.length === 0) {
+        console.log(`[WEBHOOK] No webhooks configured for user ${userId}`);
+        return { success: true, sent: 0 };
+      }
+
+      // Send webhooks
+      const results = await Promise.allSettled(
+        webhooks.map(async (webhook) => {
+          if (!webhook.events.includes(event)) {
+            return;
+          }
+
+          const response = await fetch(webhook.url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Webhook-Secret': webhook.secret,
+            },
+            body: JSON.stringify({ event, payload, timestamp: new Date().toISOString() }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Webhook failed: ${response.status}`);
+          }
+
+          return response;
+        })
+      );
+
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+
+      console.log(`[WEBHOOK] Job ${job.id} completed: ${successCount} webhooks sent`);
+      return { success: true, sent: successCount };
+    } catch (error: any) {
+      console.error(`[WEBHOOK] Job ${job.id} failed:`, error);
+      throw error;
+    }
+  },
+  { connection: redisConnection as any, concurrency: 10 }
+);
+
+// Event listeners for monitoring
+[gatherWorker, tradeBuyWorker, tradeSellWorker, distributeWorker, statusWorker, webhookWorker, fundsGatherWorker].forEach(
+  (worker) => {
+    worker.on('completed', (job) => {
+      console.log(`✅ Worker ${worker.name}: Job ${job.id} completed`);
+    });
+
+    worker.on('failed', (job, err) => {
+      console.error(`❌ Worker ${worker.name}: Job ${job?.id} failed:`, err.message);
+    });
+
+    worker.on('error', (err) => {
+      console.error(`⚠️ Worker ${worker.name} error:`, err);
+    });
+  }
+);
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing workers...');
+  await Promise.all([
+    gatherWorker.close(),
+    tradeBuyWorker.close(),
+    tradeSellWorker.close(),
+    distributeWorker.close(),
+    statusWorker.close(),
+    webhookWorker.close(),
+  ]);
+  await redisConnection.quit();
+  process.exit(0);
+});
+
+console.log('🚀 Workers started successfully!');
+console.log('Listening on queues:', Object.values(QUEUE_NAMES));

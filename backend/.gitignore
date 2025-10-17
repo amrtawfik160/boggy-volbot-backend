@@ -1,6 +1,8 @@
 # Build output
 /dist
 **/dist
+/build
+**/build
 
 # Node dependencies
 /node_modules
@@ -10,20 +12,37 @@
 *.tsbuildinfo
 **/*.tsbuildinfo
 
-# Env files
-.env
-.env.*
-!.env.example
-
 # Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+dev-debug.log
 
-# OS files
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS specific
 .DS_Store
 
 # Coverage
 coverage
 **/coverage
+
+# Next.js
+.next
+**/out

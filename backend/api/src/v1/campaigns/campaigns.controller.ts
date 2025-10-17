@@ -34,7 +34,7 @@ export class CampaignsController {
         // Use dedicated Redis connection for BullMQ queues
         // BullMQ needs its own connection for optimal performance and isolation
         const redisConnection = createRedisClient({
-            maxRetriesPerRequest: null, // BullMQ handles retries
+            maxRetriesPerRequest: undefined, // BullMQ handles retries
             enableReadyCheck: false, // BullMQ doesn't need ready check
         })
 

@@ -39,7 +39,7 @@ export class EncryptionService {
         throw new Error(`Master key must be ${this.keyLength} bytes`);
       }
       return key;
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Invalid MASTER_ENCRYPTION_KEY format', error);
       throw new Error('MASTER_ENCRYPTION_KEY must be a valid base64-encoded 32-byte key');
     }
@@ -53,7 +53,7 @@ export class EncryptionService {
     const salt = Buffer.alloc(0); // No salt for simplicity (master key is already random)
 
     // Use HKDF from crypto.hkdfSync (Node.js 15+)
-    return crypto.hkdfSync('sha256', masterKey, salt, info, this.keyLength);
+    return Buffer.from(crypto.hkdfSync('sha256', masterKey, salt, info, this.keyLength));
   }
 
   /**
@@ -95,7 +95,7 @@ export class EncryptionService {
 
       // Return: iv + encrypted + tag
       return Buffer.concat([iv, encrypted, tag]);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Failed to encrypt DEK', error);
       throw new Error('DEK encryption failed');
     }
@@ -127,8 +127,8 @@ export class EncryptionService {
       ]);
 
       return decrypted;
-    } catch (error) {
-      if (error.message?.includes('Unsupported state or unable to authenticate data')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message?.includes('Unsupported state or unable to authenticate data')) {
         this.logger.error('DEK decryption authentication failed - data tampered or wrong key');
         throw new Error('Unable to decrypt DEK. Authentication failed.');
       }
@@ -161,7 +161,7 @@ export class EncryptionService {
 
       // Return: iv + encrypted + tag
       return Buffer.concat([iv, encrypted, tag]);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Failed to encrypt with DEK', error);
       throw new Error('Encryption with DEK failed');
     }
@@ -196,8 +196,8 @@ export class EncryptionService {
       ]);
 
       return decrypted.toString('utf8');
-    } catch (error) {
-      if (error.message?.includes('Unsupported state or unable to authenticate data')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message?.includes('Unsupported state or unable to authenticate data')) {
         this.logger.error('Decryption authentication failed - data tampered or wrong key');
         throw new Error('Unable to decrypt data. Authentication failed.');
       }
@@ -252,8 +252,8 @@ export class EncryptionService {
       ]);
 
       return decrypted.toString('utf8');
-    } catch (error) {
-      if (error.message?.includes('Unsupported state or unable to authenticate data')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message?.includes('Unsupported state or unable to authenticate data')) {
         this.logger.error('Decryption authentication failed - data tampered or wrong key');
         throw new Error('Unable to decrypt wallet. Data may be corrupted.');
       }

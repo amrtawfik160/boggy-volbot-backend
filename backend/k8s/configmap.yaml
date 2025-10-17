@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: volume-bot-config
+  namespace: volume-bot
+  labels:
+    app: volume-bot
+data:
+  NODE_ENV: "production"
+  API_PORT: "3001"
+  WORKER_CONCURRENCY: "5"
+  STATUS_AGGREGATOR_INTERVAL_SECONDS: "15"
+  OTEL_ENABLED: "true"
+  OTEL_SERVICE_NAME: "volume-bot-api"
+  SENTRY_ENVIRONMENT: "production"
+  SENTRY_TRACES_SAMPLE_RATE: "0.1"
+  # Trading defaults
+  BUY_LOWER_AMOUNT: "0.001"
+  BUY_UPPER_AMOUNT: "0.002"
+  BUY_INTERVAL_MIN: "2000"
+  BUY_INTERVAL_MAX: "4000"
+  DISTRIBUTE_WALLET_NUM: "5"
+  SELL_ALL_BY_TIMES: "1"
+  TX_FEE: "0.000005"
+  ADDITIONAL_FEE: "0.0"
+  JITO_FEE: "0.0001"
+  BLOCKENGINE_URL: "https://mainnet.block-engine.jito.wtf"

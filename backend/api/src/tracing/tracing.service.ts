@@ -7,7 +7,6 @@ import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import {
   SentrySpanProcessor,
   SentryPropagator,
-  SentrySampler,
 } from '@sentry/opentelemetry-node';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import * as Sentry from '@sentry/node';
@@ -133,12 +132,7 @@ export class TracingService implements OnModuleInit {
     this.sdk = new NodeSDK({
       resource,
       spanProcessors,
-      textMapPropagator: sentryDsn
-        ? new SentryPropagator()
-        : undefined,
-      sampler: sentryDsn
-        ? new SentrySampler(Sentry.getCurrentHub())
-        : undefined,
+      textMapPropagator: sentryDsn ? new SentryPropagator() : undefined,
       instrumentations: [
         getNodeAutoInstrumentations({
           // Fine-tune instrumentation

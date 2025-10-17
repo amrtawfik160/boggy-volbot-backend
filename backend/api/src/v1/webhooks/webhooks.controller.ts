@@ -7,7 +7,7 @@ import { Queue } from 'bullmq';
 import { getRedisClient } from '../../config/redis.config';
 import { createLogger } from '../../config/logger';
 
-const logger = createLogger('webhooks-controller');
+const logger = createLogger({ name: 'webhooks-controller' });
 
 @Controller('v1/webhooks')
 @UseGuards(SupabaseAuthGuard)

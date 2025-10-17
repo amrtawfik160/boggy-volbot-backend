@@ -14,28 +14,30 @@
 **/.env
 **/.env.*
 !**/.env.example
-!**/.env.docker.example
 
 # Git
-**/.git
-**/.gitignore
-**/.gitattributes
+.git
+.gitignore
+.gitattributes
 
 # IDE
-**/.vscode
-**/.idea
-**/*.swp
-**/*.swo
-**/*~
-**/.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Frontend (not needed for backend build)
+frontend/
+node_modules/
 
 # Documentation
-**/README.md
-**/CHANGELOG.md
-**/LICENSE
-**/*.md
-!**/package.json
-!**/package-lock.json
+*.md
+!backend/api/package.json
+!backend/api/package-lock.json
+!backend/workers/package.json
+!backend/workers/package-lock.json
 
 # Tests
 **/test
@@ -48,13 +50,25 @@
 **/coverage
 
 # Misc
-**/.husky
-**/.github
-**/docker-compose*.yml
-**/Dockerfile
-**/.dockerignore
+.husky
+.github
+docker-compose*.yml
+.dockerignore
 **/tsconfig.json
-**/tsconfig.*.json
-**/.eslintrc*
-**/.prettierrc*
-**/vitest.config.*
+!**/tsconfig.build.json
+.eslintrc*
+.prettierrc*
+vitest.config.*
+
+# Task Master
+.taskmaster/
+.claude/
+.mcp.json
+CLAUDE.md
+
+# Docs that aren't needed
+docs/
+PRD*.md
+DEPLOYMENT.md
+ISSUES.md
+MAINTENANCE.md

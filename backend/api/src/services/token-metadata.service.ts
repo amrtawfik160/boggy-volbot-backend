@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { Metadata } from '@metaplex-foundation/mpl-token-metadata';
+import { deserializeMetadata } from '@metaplex-foundation/mpl-token-metadata';
 
 export async function getTokenMetadata(connection: Connection, mintAddress: PublicKey) {
   try {
@@ -29,16 +29,16 @@ export async function getTokenMetadata(connection: Connection, mintAddress: Publ
       );
 
       const metadataAccount = await connection.getAccountInfo(metadataPDA);
-      
+
       if (metadataAccount) {
-        const metadata = Metadata.deserialize(metadataAccount.data)[0];
-        symbol = metadata.data.symbol.replace(/\0/g, '');
-        name = metadata.data.name.replace(/\0/g, '');
+        const metadata = deserializeMetadata(metadataAccount.data as any);
+        symbol = metadata.symbol.replace(/\0/g, '');
+        name = metadata.name.replace(/\0/g, '');
         
         // Fetch off-chain metadata if URI exists
-        if (metadata.data.uri) {
+        if (metadata.uri) {
           try {
-            const response = await fetch(metadata.data.uri.replace(/\0/g, ''));
+            const response = await fetch(metadata.uri.replace(/\0/g, ''));
             const json = await response.json();
             image = json.image || '';
           } catch {

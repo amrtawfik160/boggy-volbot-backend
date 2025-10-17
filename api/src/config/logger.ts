@@ -59,7 +59,7 @@ export function createLogger(options: LoggerOptions) {
     name,
     level: process.env.LOG_LEVEL || level,
     formatters: {
-      level: (label) => {
+      level: (label: string) => {
         return { level: label };
       },
     },

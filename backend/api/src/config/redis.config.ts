@@ -145,6 +145,6 @@ export async function getRedisPoolStats(): Promise<{
         connected: client.status === 'ready',
         status: client.status,
         commandQueueLength: client.commandQueue.length,
-        offlineQueueLength: client.offlineQueue.length,
+        offlineQueueLength: (client as any).offlineQueue?.length || 0,
     }
 }

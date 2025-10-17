@@ -1,6 +1,7 @@
 # ==========================================
 # Multi-Service Backend Dockerfile
 # Builds both API and Workers from backend root
+# Deploy from repository root with context: backend/
 # ==========================================
 
 # ==========================================
@@ -14,26 +15,19 @@ RUN apk add --no-cache python3 make g++
 # Set working directory
 WORKDIR /app
 
-# Copy root package files (if any)
-COPY package*.json ./
-
-# Copy API and Workers directories
-COPY api ./api
-COPY workers ./workers
-
 # Build API
+COPY backend/api ./api
 WORKDIR /app/api
-RUN npm ci --only=production=false && npm run build
-
-# Build Workers
-WORKDIR /app/workers
-RUN npm ci --only=production=false && npm run build
-
-# Clean up dev dependencies
-WORKDIR /app/api
+RUN npm ci --legacy-peer-deps
+RUN npm run build
 RUN npm prune --production
 
+# Build Workers
+WORKDIR /app
+COPY backend/workers ./workers
 WORKDIR /app/workers
+RUN npm ci --legacy-peer-deps
+RUN npm run build
 RUN npm prune --production
 
 # ==========================================
@@ -51,7 +45,9 @@ WORKDIR /app
 COPY --from=builder --chown=nodejs:nodejs /app/api/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/api/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/api/package*.json ./
-COPY --from=builder --chown=nodejs:nodejs /app/api/migrations ./migrations
+
+# Copy migrations if they exist
+COPY --from=builder --chown=nodejs:nodejs /app/api/migrations ./migrations 2>/dev/null || true
 
 # Switch to non-root user
 USER nodejs
