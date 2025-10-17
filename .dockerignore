@@ -55,7 +55,7 @@ node_modules/
 docker-compose*.yml
 .dockerignore
 **/tsconfig.json
-**/tsconfig.*.json
+!**/tsconfig.build.json
 .eslintrc*
 .prettierrc*
 vitest.config.*
