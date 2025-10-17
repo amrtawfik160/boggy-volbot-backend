@@ -54,7 +54,7 @@ export const REDIS_POOL_CONFIG: RedisPoolConfig = {
     maxRetriesPerRequest: 3,
     enableAutoPipelining: true,
     enableReadyCheck: true,
-    lazyConnect: false,
+    lazyConnect: true, // Don't connect until first command
     connectTimeout: 10000,
     keepAlive: 30000, // 30 seconds
     retryStrategy: (times: number) => {
