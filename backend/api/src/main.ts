@@ -26,6 +26,7 @@ async function bootstrap() {
 
   logger.info('Environment configuration validated');
 
+  logger.info('About to call NestFactory.create(AppModule)...');
   const app = await NestFactory.create(AppModule, {
     logger: false, // Disable default NestJS logger, we'll use Pino
   });

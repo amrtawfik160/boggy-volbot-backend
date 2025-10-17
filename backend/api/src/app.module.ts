@@ -16,7 +16,6 @@ import { TransactionSigningService } from './services/transaction-signing.servic
 import { KeyRotationService } from './services/key-rotation.service'
 import { StatusMonitorService } from './services/status-monitor.service'
 import { WebSocketModule } from './websocket/websocket.module'
-import { RedisThrottlerStorage } from './throttler/redis-throttler-storage'
 import { GeneralThrottlerGuard } from './guards/general-throttler.guard'
 import { AdminModule } from './v1/admin/admin.module'
 import { RequestContextMiddleware } from './middleware/request-context.middleware'
@@ -53,7 +52,9 @@ import { WebhooksModule } from './v1/webhooks/webhooks.module'
                     limit: 10, // 10 requests per minute for wallet creation
                 },
             ],
-            storage: new RedisThrottlerStorage(),
+            // Disable Redis throttler storage for now - use in-memory storage
+            // TODO: Re-enable Redis storage after fixing lazy initialization
+            // storage: new RedisThrottlerStorage(),
         }),
     ],
     controllers: [MeController, TokensController, WalletsController, CampaignsController, DashboardController, SettingsController],
