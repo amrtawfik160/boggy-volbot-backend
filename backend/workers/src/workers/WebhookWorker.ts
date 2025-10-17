@@ -59,7 +59,7 @@ export class WebhookWorker extends BaseWorker<WebhookJobData, WebhookJobResult> 
     attempt: WebhookDeliveryAttempt,
     event: string,
     payload: unknown,
-    userId: string,
+    userId: string | undefined,
     context: JobContext
   ): Promise<{ success: boolean; deliveryId: string }> {
     const { webhookId, url, secret, deliveryId } = attempt;
@@ -96,7 +96,7 @@ export class WebhookWorker extends BaseWorker<WebhookJobData, WebhookJobResult> 
         .from('webhook_deliveries')
         .insert({
           webhook_id: webhookId,
-          user_id: userId,
+          user_id: userId || '',
           event,
           payload: webhookPayload,
           url,
@@ -152,7 +152,7 @@ export class WebhookWorker extends BaseWorker<WebhookJobData, WebhookJobResult> 
           status: response.status,
         }, 'Webhook delivered successfully');
 
-        return { success: true, deliveryId: currentDeliveryId };
+        return { success: true, deliveryId: currentDeliveryId! };
       } else {
         // HTTP error - determine if we should retry
         const shouldRetry = attemptNumber < 5 && response.status >= 500;
@@ -185,7 +185,7 @@ export class WebhookWorker extends BaseWorker<WebhookJobData, WebhookJobResult> 
               deliveryId: currentDeliveryId,
             },
             {
-              delay: (nextRetryAt.getTime() - Date.now()),
+              delay: (nextRetryAt!.getTime() - Date.now()),
               attempts: 1, // Each retry is a single attempt
               removeOnComplete: true,
             }
@@ -242,7 +242,7 @@ export class WebhookWorker extends BaseWorker<WebhookJobData, WebhookJobResult> 
             deliveryId: currentDeliveryId,
           },
           {
-            delay: (nextRetryAt.getTime() - Date.now()),
+            delay: (nextRetryAt!.getTime() - Date.now()),
             attempts: 1,
             removeOnComplete: true,
           }
