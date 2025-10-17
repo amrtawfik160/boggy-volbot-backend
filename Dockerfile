@@ -19,6 +19,7 @@ WORKDIR /app
 COPY backend/api ./api
 WORKDIR /app/api
 RUN npm ci --legacy-peer-deps
+RUN npm run postinstall || true
 RUN npm run build
 RUN npm prune --production --legacy-peer-deps
 
@@ -27,6 +28,7 @@ WORKDIR /app
 COPY backend/workers ./workers
 WORKDIR /app/workers
 RUN npm ci --legacy-peer-deps
+RUN npm run postinstall || true
 RUN npm run build
 RUN npm prune --production --legacy-peer-deps
 

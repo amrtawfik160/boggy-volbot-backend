@@ -25,7 +25,8 @@
         "migrate:redo": "node-pg-migrate redo",
         "migrate:status": "node-pg-migrate status",
         "db:seed": "ts-node scripts/seed.ts",
-        "validate:log-levels": "ts-node scripts/validate-log-levels.ts"
+        "validate:log-levels": "ts-node scripts/validate-log-levels.ts",
+        "postinstall": "patch-package"
     },
     "dependencies": {
         "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
@@ -74,6 +75,7 @@
         "@vitest/coverage-v8": "^2.1.8",
         "eslint": "^9.16.0",
         "node-pg-migrate": "^8.0.3",
+        "patch-package": "^8.0.1",
         "prettier": "^3.6.2",
         "ts-node": "^10.9.2",
         "ts-node-dev": "^2.0.0",

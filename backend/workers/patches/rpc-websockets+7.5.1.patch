@@ -1,0 +1,23 @@
+diff --git a/node_modules/rpc-websockets/dist/index.js b/node_modules/rpc-websockets/dist/index.js
+index 949ec10..f6085d8 100644
+--- a/node_modules/rpc-websockets/dist/index.js
++++ b/node_modules/rpc-websockets/dist/index.js
+@@ -12,6 +12,18 @@ Object.defineProperty(exports, "Server", {
+     return _server["default"];
+   }
+ });
++Object.defineProperty(exports, "CommonClient", {
++  enumerable: true,
++  get: function get() {
++    return _client["default"];
++  }
++});
++Object.defineProperty(exports, "WebSocket", {
++  enumerable: true,
++  get: function get() {
++    return _websocket["default"];
++  }
++});
+ 
+ var _createClass2 = _interopRequireDefault(require("@babel/runtime/helpers/createClass"));
+ 
