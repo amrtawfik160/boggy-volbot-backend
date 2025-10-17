@@ -15,20 +15,20 @@ RUN apk add --no-cache python3 make g++
 # Set working directory
 WORKDIR /app
 
-# Copy API directory
-COPY backend/api/package*.json ./api/
+# Build API
+COPY backend/api ./api
 WORKDIR /app/api
 RUN npm ci --legacy-peer-deps
-COPY backend/api ./
-RUN npm run build && npm prune --production
+RUN npm run build
+RUN npm prune --production
 
-# Copy Workers directory
+# Build Workers
 WORKDIR /app
-COPY backend/workers/package*.json ./workers/
+COPY backend/workers ./workers
 WORKDIR /app/workers
 RUN npm ci --legacy-peer-deps
-COPY backend/workers ./
-RUN npm run build && npm prune --production
+RUN npm run build
+RUN npm prune --production
 
 # ==========================================
 # Stage 2: API Service
