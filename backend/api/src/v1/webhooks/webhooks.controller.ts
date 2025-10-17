@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../../guards/supabase-auth.guard';
-import { User } from '../../decorators/user.decorator';
+import { CurrentUser } from '../../decorators/user.decorator';
 import { SupabaseService } from '../../services/supabase.service';
 import { CreateWebhookDto, UpdateWebhookDto, TestWebhookDto, WebhookDeliveryQueryDto } from './webhooks.dto';
 import { Queue } from 'bullmq';
 import { getRedisClient } from '../../config/redis.config';
-import { createLogger } from '../../config/logger.config';
+import { createLogger } from '../../config/logger';
 
 const logger = createLogger('webhooks-controller');
 
@@ -18,7 +18,7 @@ export class WebhooksController {
    * Get all webhooks for the authenticated user
    */
   @Get()
-  async listWebhooks(@User() user: any) {
+  async listWebhooks(@CurrentUser() user: any) {
     const { data, error } = await this.supabase.getClient()
       .from('webhooks')
       .select('*')
@@ -40,7 +40,7 @@ export class WebhooksController {
    * Get a single webhook by ID
    */
   @Get(':id')
-  async getWebhook(@User() user: any, @Param('id') id: string) {
+  async getWebhook(@CurrentUser() user: any, @Param('id') id: string) {
     const { data, error } = await this.supabase.getClient()
       .from('webhooks')
       .select('*')
@@ -63,7 +63,7 @@ export class WebhooksController {
    * Create a new webhook
    */
   @Post()
-  async createWebhook(@User() user: any, @Body() dto: CreateWebhookDto) {
+  async createWebhook(@CurrentUser() user: any, @Body() dto: CreateWebhookDto) {
     const { data, error } = await this.supabase.getClient()
       .from('webhooks')
       .insert({
@@ -94,7 +94,7 @@ export class WebhooksController {
    */
   @Put(':id')
   async updateWebhook(
-    @User() user: any,
+    @CurrentUser() user: any,
     @Param('id') id: string,
     @Body() dto: UpdateWebhookDto
   ) {
@@ -127,7 +127,7 @@ export class WebhooksController {
    * Delete a webhook
    */
   @Delete(':id')
-  async deleteWebhook(@User() user: any, @Param('id') id: string) {
+  async deleteWebhook(@CurrentUser() user: any, @Param('id') id: string) {
     const { error } = await this.supabase.getClient()
       .from('webhooks')
       .delete()
@@ -151,7 +151,7 @@ export class WebhooksController {
    * Send a test webhook
    */
   @Post('test')
-  async testWebhook(@User() user: any, @Body() dto: TestWebhookDto) {
+  async testWebhook(@CurrentUser() user: any, @Body() dto: TestWebhookDto) {
     const { webhookId, event = 'test_event' } = dto;
 
     // Verify webhook belongs to user
@@ -214,7 +214,7 @@ export class WebhooksController {
    */
   @Get(':id/deliveries')
   async getWebhookDeliveries(
-    @User() user: any,
+    @CurrentUser() user: any,
     @Param('id') id: string,
     @Query() query: WebhookDeliveryQueryDto
   ) {
@@ -273,7 +273,7 @@ export class WebhooksController {
    */
   @Get('deliveries/all')
   async getAllDeliveries(
-    @User() user: any,
+    @CurrentUser() user: any,
     @Query() query: WebhookDeliveryQueryDto
   ) {
     // Build query
