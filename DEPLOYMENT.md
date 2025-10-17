@@ -5,6 +5,7 @@ This guide covers deploying the Solana Volume Bot to production environments usi
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
+- [Railway Deployment](#railway-deployment) (Recommended - Easiest)
 - [Docker Compose Deployment](#docker-compose-deployment)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [Scaling Workers](#scaling-workers)
@@ -37,6 +38,468 @@ This guide covers deploying the Solana Volume Bot to production environments usi
 - Docker & Docker Compose (for Docker deployment)
 - kubectl & Kubernetes cluster (for K8s deployment)
 - Node.js 20+ (for local development)
+- Railway CLI (for Railway deployment)
+
+## Railway Deployment
+
+Railway is the easiest and fastest way to deploy your backend. Railway handles infrastructure, provides automatic Redis, and offers one-click deployments.
+
+### Why Railway?
+
+- **Zero infrastructure management** - Railway handles everything
+- **Built-in Redis** - Automatic Redis provisioning with connection URL
+- **Automatic SSL/HTTPS** - Free SSL certificates
+- **Easy scaling** - Scale with a single click or command
+- **GitHub integration** - Auto-deploy on push
+- **Free tier** - $5 credit/month to start
+- **One-click rollbacks** - Easy to revert deployments
+
+### 1. Initial Setup
+
+#### Option A: Railway Dashboard (Recommended for First Time)
+
+1. **Sign up for Railway**:
+   - Go to https://railway.app/
+   - Sign up with GitHub (recommended)
+
+2. **Create New Project**:
+   - Click "New Project"
+   - Select "Deploy from GitHub repo"
+   - Connect your GitHub account
+   - Select your `boggy-volume-bot` repository
+
+3. **Configure API Service**:
+   - Click "New Service" → "GitHub Repo"
+   - Railway will detect your repository
+   - **Settings to configure**:
+     - **Service Name**: `volume-bot-api`
+     - **Root Directory**: `backend/api`
+     - **Builder**: Dockerfile (auto-detected)
+     - **Health Check Path**: `/v1/health`
+
+4. **Add Redis Database**:
+   - In project dashboard, click "New"
+   - Select "Database" → "Add Redis"
+   - Railway automatically creates `REDIS_URL` variable
+
+5. **Configure Environment Variables**:
+
+   Go to `volume-bot-api` service → Variables tab, add these:
+
+   ```env
+   # === REQUIRED ===
+   NODE_ENV=production
+   API_PORT=3001
+
+   # Supabase (from your Supabase dashboard)
+   SUPABASE_URL=https://ottitsqzdtdvnhcdtzuj.supabase.co
+   SUPABASE_ANON_KEY=your_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+   # Security - Generate new key for production!
+   MASTER_ENCRYPTION_KEY=your_32byte_base64_key
+
+   # CORS - Update with your frontend domain
+   CORS_ORIGIN=https://your-frontend.vercel.app
+
+   # === OPTIONAL BUT RECOMMENDED ===
+
+   # Solana RPC (use dedicated provider for production)
+   SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+   RPC_ENDPOINT=https://api.mainnet-beta.solana.com
+   RPC_WEBSOCKET_ENDPOINT=wss://api.mainnet-beta.solana.com
+
+   # Trading defaults
+   BUY_LOWER_AMOUNT=0.001
+   BUY_UPPER_AMOUNT=0.002
+   BUY_INTERVAL_MIN=2000
+   BUY_INTERVAL_MAX=4000
+
+   # Monitoring (highly recommended)
+   SENTRY_DSN=your_sentry_dsn
+   SENTRY_ENVIRONMENT=production
+   OTEL_ENABLED=true
+   ```
+
+   **Important**: Generate a new `MASTER_ENCRYPTION_KEY`:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+   ```
+
+6. **Deploy**:
+   - Railway automatically builds and deploys
+   - View logs in real-time from Deployments tab
+   - Get your API URL from Settings → Domains
+
+#### Option B: Railway CLI (For Faster Subsequent Deploys)
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Navigate to backend API directory
+cd backend/api
+
+# Initialize Railway project (first time only)
+railway init
+
+# Or link to existing project
+railway link
+
+# Add Redis database
+railway add -d redis
+
+# Set environment variables (do this once)
+railway variables set NODE_ENV=production
+railway variables set API_PORT=3001
+railway variables set SUPABASE_URL=your_url
+railway variables set SUPABASE_ANON_KEY=your_key
+railway variables set SUPABASE_SERVICE_ROLE_KEY=your_key
+railway variables set MASTER_ENCRYPTION_KEY=your_key
+railway variables set CORS_ORIGIN=your_frontend_url
+
+# Deploy
+railway up
+
+# Get your public URL
+railway domain
+```
+
+### 2. Add Workers Service (Optional but Recommended)
+
+Workers handle background job processing. Deploy them separately:
+
+1. **Add New Service**:
+   - In project dashboard, click "New" → "GitHub Repo"
+   - Select same repository
+
+2. **Configure Worker Service**:
+   - **Service Name**: `volume-bot-workers`
+   - **Root Directory**: `backend/workers`
+   - **Builder**: Dockerfile
+
+3. **Share Environment Variables**:
+   - Workers need same environment variables as API
+   - Copy all variables from API service
+   - Or use Railway's "Reference Variable" feature
+
+4. **Scale Workers**:
+   - Go to Settings → Replicas
+   - Set desired number of worker instances (2-10 recommended)
+
+### 3. Post-Deployment Steps
+
+#### Verify Deployment
+
+```bash
+# Get your Railway domain
+railway domain
+
+# Test health endpoint
+curl https://your-app.railway.app/v1/health
+
+# Expected response:
+# {
+#   "status": "ok",
+#   "info": {
+#     "database": { "status": "up" },
+#     "redis": { "status": "up" }
+#   }
+# }
+
+# View API documentation
+open https://your-app.railway.app/api-docs
+```
+
+#### View Logs
+
+```bash
+# Via CLI
+railway logs
+
+# Or via dashboard:
+# Project → Service → Deployments → Click deployment → View Logs
+```
+
+#### Add Custom Domain (Optional)
+
+1. Go to Service → Settings → Domains
+2. Click "Custom Domain"
+3. Enter your domain (e.g., `api.yourdomain.com`)
+4. Add CNAME record to your DNS:
+   ```
+   Type: CNAME
+   Name: api
+   Value: your-app.railway.app
+   ```
+5. Railway automatically provisions SSL certificate
+
+### 4. Continuous Deployment
+
+Railway automatically deploys when you push to GitHub:
+
+```bash
+# Make changes to your code
+git add .
+git commit -m "feat: add new feature"
+git push origin main
+
+# Railway automatically:
+# 1. Detects push
+# 2. Builds Docker image
+# 3. Runs health checks
+# 4. Deploys new version
+# 5. Routes traffic to new deployment
+```
+
+**Disable auto-deploy** (deploy manually):
+```bash
+railway settings --no-auto-deploy
+```
+
+### 5. Scaling on Railway
+
+#### Vertical Scaling (More Resources per Instance)
+
+1. Go to Service → Settings → Resources
+2. Increase CPU/Memory allocation
+3. Save and redeploy
+
+#### Horizontal Scaling (More Instances)
+
+Railway Pro plan supports multiple replicas:
+
+```bash
+# Via dashboard:
+# Service → Settings → Replicas → Set desired count
+
+# Via CLI:
+railway settings --replicas 3
+```
+
+**Auto-scaling** with Railway Pro:
+- Configurable CPU/Memory thresholds
+- Automatic scale up/down based on load
+
+### 6. Railway Environment Management
+
+#### Multiple Environments
+
+Create separate environments for staging/production:
+
+```bash
+# Create staging environment
+railway environment create staging
+
+# Switch environments
+railway environment use staging
+railway environment use production
+
+# Deploy to specific environment
+railway up --environment staging
+```
+
+#### Secrets Management
+
+```bash
+# Set sensitive variables
+railway variables set DATABASE_PASSWORD=secret
+
+# View all variables
+railway variables
+
+# Delete variable
+railway variables delete OLD_VAR
+
+# Export variables to .env (for local testing)
+railway variables export > .env
+```
+
+### 7. Monitoring & Debugging
+
+#### View Metrics
+
+Railway dashboard provides:
+- CPU usage
+- Memory usage
+- Network I/O
+- Request count
+- Error rates
+
+#### View Real-time Logs
+
+```bash
+# Stream logs
+railway logs --follow
+
+# Filter logs
+railway logs | grep ERROR
+
+# Last 100 lines
+railway logs --tail 100
+```
+
+#### Database Logs (Redis)
+
+```bash
+# View Redis logs
+railway logs --service redis
+```
+
+### 8. Railway Cost Optimization
+
+#### Free Tier ($5/month)
+
+- Sufficient for development/testing
+- ~500 hours of runtime
+- 100GB outbound bandwidth
+
+#### Pro Plan ($20/month)
+
+- Multiple replicas
+- Auto-scaling
+- Priority support
+- Higher resource limits
+
+#### Cost-Saving Tips
+
+1. **Use efficient Docker images** (already using multi-stage build)
+2. **Set resource limits** to prevent runaway costs
+3. **Scale down during off-hours** (if applicable)
+4. **Monitor usage dashboard** regularly
+5. **Use Railway's Redis** (included, no extra cost)
+
+### 9. Troubleshooting Railway Deployment
+
+#### Build Failures
+
+```bash
+# View build logs
+railway logs --build
+
+# Common issues:
+# - Missing dependencies in package.json
+# - Dockerfile syntax errors
+# - Out of memory during build (increase build resources)
+```
+
+#### Runtime Errors
+
+1. **Check health endpoint**:
+   ```bash
+   curl https://your-app.railway.app/v1/health
+   ```
+
+2. **View runtime logs**:
+   ```bash
+   railway logs --filter "ERROR"
+   ```
+
+3. **Verify environment variables**:
+   ```bash
+   railway variables
+   ```
+
+#### Redis Connection Issues
+
+- Verify Redis service is running: Check Railway dashboard
+- Verify `REDIS_URL` is set: `railway variables | grep REDIS`
+- Test connection: Check logs for Redis connection errors
+
+#### Database Connection Issues
+
+1. **Verify Supabase credentials**:
+   ```bash
+   railway variables | grep SUPABASE
+   ```
+
+2. **Test connection from Railway**:
+   ```bash
+   # Use Railway's shell feature
+   railway run bash
+   # Inside shell: test connection
+   curl https://your-supabase.supabase.co
+   ```
+
+3. **Check Supabase IP allowlist**: Allow Railway IPs
+
+#### Port Issues
+
+Railway automatically sets `$PORT` environment variable. Your app reads `API_PORT` (defaults to 3001), which works correctly.
+
+### 10. Railway vs Other Platforms
+
+| Feature | Railway | Heroku | AWS | DigitalOcean |
+|---------|---------|--------|-----|--------------|
+| **Ease of setup** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
+| **Auto-scaling** | ✅ (Pro) | ✅ | ✅ | ✅ |
+| **Built-in Redis** | ✅ Free | ❌ Paid | ❌ Setup | ❌ Setup |
+| **Free tier** | $5/mo | ❌ | ✅ Limited | ❌ |
+| **Dockerfile support** | ✅ | ✅ | ✅ | ✅ |
+| **GitHub integration** | ✅ | ✅ | ❌ Manual | ✅ |
+| **Cost (small app)** | $5-20/mo | $25+/mo | $20+/mo | $12+/mo |
+| **Learning curve** | Low | Low | High | Medium |
+
+**Railway is recommended for this project because:**
+- Simple deployment process
+- Built-in Redis (critical requirement)
+- Automatic HTTPS
+- Easy scaling
+- Cost-effective for small to medium apps
+
+### Quick Reference: Railway Commands
+
+```bash
+# Setup
+railway login                              # Login to Railway
+railway init                              # Initialize project
+railway link                              # Link to existing project
+
+# Deployment
+railway up                                # Deploy current directory
+railway up --service api                  # Deploy specific service
+railway up --environment production       # Deploy to specific environment
+
+# Management
+railway logs                              # View logs
+railway logs --follow                     # Stream logs
+railway domain                            # Get public URL
+railway variables                         # List environment variables
+railway variables set KEY=value           # Set variable
+railway status                            # Check deployment status
+
+# Databases
+railway add -d redis                      # Add Redis database
+railway add -d postgres                   # Add PostgreSQL database
+
+# Environment
+railway environment                       # List environments
+railway environment create staging        # Create new environment
+railway environment use staging           # Switch environment
+
+# Service management
+railway settings --replicas 3             # Scale to 3 instances
+railway settings --no-auto-deploy         # Disable auto-deploy
+railway open                              # Open dashboard in browser
+
+# Debugging
+railway run bash                          # Open shell in Railway environment
+railway logs --service redis              # View service-specific logs
+```
+
+### Configuration Files
+
+Two files have been created in `backend/api/`:
+
+1. **`railway.json`** - Railway-specific configuration
+2. **`.railwayignore`** - Files to exclude from deployment
+
+These optimize your Railway deployment for better performance and faster builds.
+
+---
 
 ## Docker Compose Deployment
 
