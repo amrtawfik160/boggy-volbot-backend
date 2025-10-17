@@ -20,7 +20,7 @@ COPY backend/api ./api
 WORKDIR /app/api
 RUN npm ci --legacy-peer-deps
 RUN npm run build
-RUN npm prune --production
+RUN npm prune --production --legacy-peer-deps
 
 # Build Workers
 WORKDIR /app
@@ -28,7 +28,7 @@ COPY backend/workers ./workers
 WORKDIR /app/workers
 RUN npm ci --legacy-peer-deps
 RUN npm run build
-RUN npm prune --production
+RUN npm prune --production --legacy-peer-deps
 
 # ==========================================
 # Stage 2: API Service
