@@ -1,0 +1,20 @@
+# Railway ignore file - files to exclude from deployment
+node_modules/
+.env
+.env.local
+.env.*.local
+*.log
+coverage/
+.vscode/
+.idea/
+*.test.ts
+*.spec.ts
+__tests__/
+test/
+tests/
+.git/
+.gitignore
+README.md
+*.md
+!package.json
+!package-lock.json

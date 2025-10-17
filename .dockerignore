@@ -1,0 +1,74 @@
+# Dependencies
+**/node_modules
+**/npm-debug.log
+**/yarn-error.log
+**/.pnpm-debug.log
+
+# Build outputs
+**/dist
+**/build
+**/.next
+**/out
+
+# Environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Frontend (not needed for backend build)
+frontend/
+node_modules/
+
+# Documentation
+*.md
+!backend/api/package.json
+!backend/api/package-lock.json
+!backend/workers/package.json
+!backend/workers/package-lock.json
+
+# Tests
+**/test
+**/tests
+**/__tests__
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+**/coverage
+
+# Misc
+.husky
+.github
+docker-compose*.yml
+.dockerignore
+**/tsconfig.json
+**/tsconfig.*.json
+.eslintrc*
+.prettierrc*
+vitest.config.*
+
+# Task Master
+.taskmaster/
+.claude/
+.mcp.json
+CLAUDE.md
+
+# Docs that aren't needed
+docs/
+PRD*.md
+DEPLOYMENT.md
+ISSUES.md
+MAINTENANCE.md

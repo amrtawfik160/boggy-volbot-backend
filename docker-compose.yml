@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    command: ["redis-server", "--appendonly", "yes"]
+  api:
+    build: ../../
+    command: pnpm --filter @boggy/api dev
+    environment:
+      - API_PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=development
+    ports:
+      - '3001:3001'
+    depends_on:
+      - redis
+  workers:
+    build: ../../
+    command: pnpm --filter @boggy/workers dev
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=development
+    depends_on:
+      - redis
+
